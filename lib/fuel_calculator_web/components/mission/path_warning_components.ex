@@ -30,7 +30,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
     >
       <.icon name="hero-exclamation-triangle-solid" class="size-5 shrink-0 text-warn-icon" />
       <span><b>Check path.</b> {message(@warning)}</span>
-      <span class="ml-auto flex flex-wrap gap-2">
+      <span class="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
         <.fix_button
           event="insert_fix"
           step_id={@step_id}
@@ -67,7 +67,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
       phx-value-id={@step_id}
       disabled={@disabled}
       aria-describedby={@describedby}
-      class={["btn btn-sm rounded-full", @class]}
+      class={["btn btn-sm h-auto min-h-8 whitespace-normal rounded-full py-1.5 text-left", @class]}
     >
       {render_slot(@inner_block)}
     </button>

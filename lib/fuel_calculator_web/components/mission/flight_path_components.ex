@@ -33,7 +33,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     ~H"""
     <section
       aria-labelledby="flight-path-heading"
-      class="surface flex flex-col px-3 pb-4 pt-5 sm:px-5"
+      class="surface flex flex-col px-3 pb-4 pt-4 sm:px-5 sm:pt-5"
     >
       <.path_header has_steps={@count > 0} />
       <ol id="steps" class="flex flex-col">
@@ -82,7 +82,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     ~H"""
     <div class="flex items-end gap-4 pb-2.5">
       <%!-- Lines up with the step number column and the spine's two rails. --%>
-      <div class="w-11 shrink-0"></div>
+      <div class="hidden w-11 shrink-0 sm:block"></div>
       <div
         id="spine-rails"
         aria-hidden="true"
@@ -140,11 +140,11 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     <li
       id={"step-#{@id}"}
       class={[
-        "motion-row-enter flex items-stretch gap-4 border-t border-rule",
+        "motion-row-enter flex items-stretch gap-3 border-t border-rule sm:gap-4",
         @selected && "rounded-field border-transparent bg-base-200/60"
       ]}
     >
-      <div class="shrink-0 pl-1 pt-4">
+      <div class="shrink-0 pt-4 sm:pl-1">
         <.step_number id={@id} index={@index} selected={@selected} warned={@warning != nil} />
       </div>
       <.spine_column
@@ -153,9 +153,11 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         selected={@selected}
         warned={@warning != nil}
       />
-      <div class="flex min-w-0 flex-1 flex-col gap-2 py-4 pr-1">
+      <div class="flex min-w-0 flex-1 flex-col gap-2 py-4 sm:pr-1">
         <input type="hidden" name={@step[:id].name} value={@id} />
-        <div class="flex flex-wrap items-center gap-3">
+        <%!-- Phones: Launch/Land and the menu, then the body choice at full width,
+             then the fuel. Wider screens: everything on one line. --%>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2.5">
           <.maneuver_choice field={@step[:action]} index={@index} />
           <.body_choice field={@step[:planet]} index={@index} />
           <.step_fuel_amount id={@id} fuel={@fuel} max_fuel={@max_fuel} />
@@ -187,7 +189,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       phx-value-id={@id}
       aria-pressed={to_string(@selected)}
       class={[
-        "flex size-10 items-center justify-center rounded-full border font-mono text-xs font-semibold transition-colors",
+        "flex size-9 items-center justify-center rounded-full border font-mono text-xs font-semibold transition-colors sm:size-10",
         if(@selected,
           do: "border-transparent bg-[var(--step-number-selected)] text-[#1F1B24]",
           else:
@@ -215,8 +217,11 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       field={@field}
       legend={"Maneuver for step #{@index + 1}"}
       options={for action <- FlightStep.actions(), do: {action, maneuver_label(action), nil}}
+      class="order-1 sm:order-none"
     />
-    <span class="w-6 text-center text-sm text-muted">{preposition(@field.value)}</span>
+    <span class="hidden w-6 text-center text-sm text-muted sm:inline">
+      {preposition(@field.value)}
+    </span>
     """
   end
 
@@ -236,6 +241,8 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       field={@field}
       legend={"Body for step #{@index + 1}"}
       options={for %Planet{id: id, name: name} <- Planet.all(), do: {id, name, id}}
+      class="order-3 w-full sm:order-none sm:w-auto"
+      stretch
     />
     """
   end
@@ -243,17 +250,20 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   attr :field, Phoenix.HTML.FormField, required: true
   attr :legend, :string, required: true
   attr :options, :list, required: true, doc: "{value atom, label, planet id for a dot or nil}"
+  attr :class, :string, default: nil
+  attr :stretch, :boolean, default: false, doc: "segments share the full width on phones"
 
   # A radio group styled as a segmented control. The field value is an atom once
   # cast, or the raw string when the submitted value was invalid.
   defp segmented(assigns) do
     ~H"""
-    <fieldset class="flex gap-0.5 rounded-full bg-base-200 p-1">
+    <fieldset class={["flex gap-0.5 rounded-full bg-base-200 p-1", @class]}>
       <legend class="sr-only">{@legend}</legend>
       <label
         :for={{value, label, planet} <- @options}
         class={[
-          "flex min-h-8 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-muted transition-colors hover:text-base-content",
+          "flex min-h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted transition-colors hover:text-base-content sm:min-h-8 sm:px-3.5",
+          @stretch && "flex-1 sm:flex-none",
           "has-checked:bg-base-100 has-checked:text-base-content has-checked:shadow-sm",
           "has-focus-visible:outline-2 has-focus-visible:outline-offset-1 has-focus-visible:outline-base-content"
         ]}
@@ -282,7 +292,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
 
   defp step_fuel_amount(assigns) do
     ~H"""
-    <span class="ml-auto flex min-w-36 flex-col items-end gap-1.5">
+    <span class="order-4 flex w-full flex-col items-start gap-1.5 sm:order-none sm:ml-auto sm:w-auto sm:min-w-36 sm:items-end">
       <span class="font-mono text-lg font-bold leading-tight">
         <.rolling_number :if={@fuel} id={"step-fuel-#{@id}"} value={@fuel.fuel_kg} /><span :if={
           !@fuel
@@ -341,7 +351,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   # the remove button away from accidental taps.
   defp step_menu(assigns) do
     ~H"""
-    <details class="dropdown dropdown-end sm:hidden">
+    <details class="dropdown dropdown-end order-2 ml-auto sm:hidden">
       <summary
         class="btn btn-ghost btn-square btn-sm"
         aria-label={"More actions for step #{@index + 1}"}

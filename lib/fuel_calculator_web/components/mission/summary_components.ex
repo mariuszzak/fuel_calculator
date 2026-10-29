@@ -26,9 +26,9 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
     <section
       id="summary"
       aria-labelledby="summary-heading"
-      class="surface grid grid-cols-2 overflow-hidden"
+      class="surface @container grid grid-cols-2 overflow-hidden"
     >
-      <div class="col-span-2 flex min-h-36 flex-col gap-2 border-b border-rule px-6 py-5">
+      <div class="col-span-2 flex min-h-36 flex-col gap-2 border-b border-rule px-4 py-5 sm:px-6">
         <div class="flex items-center justify-between gap-2">
           <h2 id="summary-heading" class="text-xs font-semibold uppercase tracking-wider text-muted">
             Total fuel required
@@ -95,7 +95,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
         id="total-fuel"
         value={@report.total_fuel_kg}
         aria-hidden="true"
-        class="fuel-mark font-mono text-4xl font-bold leading-none sm:text-[56px]"
+        class="fuel-mark font-mono text-[clamp(1.75rem,11cqi,3.5rem)] font-bold leading-none [overflow-wrap:anywhere]"
       />
       <span class="font-mono text-lg text-muted" aria-hidden="true">kg</span>
     </p>
@@ -142,7 +142,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   defp figure(assigns) do
     ~H"""
     <div class={[
-      "px-6 py-3",
+      "px-4 py-3 sm:px-6",
       !@last_column && "border-r border-rule",
       !@bottom && "border-b border-rule"
     ]}>

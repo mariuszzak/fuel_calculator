@@ -45,7 +45,7 @@ defmodule FuelCalculatorWeb.MissionLive do
           aria-label="Spacecraft and result"
           class="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]"
         >
-          <div class="surface flex flex-col justify-between gap-6 p-6">
+          <div class="surface flex flex-col justify-between gap-5 p-4 sm:gap-6 sm:p-6">
             <h2 class="text-xs font-semibold uppercase tracking-wider text-muted">Spacecraft</h2>
             <.mass_field field={@form[:mass]} />
             <.preset_picker presets={@presets} active_id={@preset_id} modified={@modified} />
