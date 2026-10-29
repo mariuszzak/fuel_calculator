@@ -194,7 +194,8 @@ Companion documents:
 
 - Test behaviour, not implementation. Name tests by behaviour
   (`"returns 0 fuel when the formula goes negative"`).
-- Arrange / Act / Assert structure, visibly separated.
+- Arrange / Act / Assert structure, with the three parts separated by blank
+  lines. Don't label them with `# Arrange` / `# Act` / `# Assert` comments.
 - **Errors: assert concrete values, not wildcards.** Compare whole error
   results with `==` against the exact expected struct, built with its
   constructor, including error messages. Avoid `[_ | _]`, partial struct
