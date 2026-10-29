@@ -11,9 +11,8 @@ defmodule FuelCalculatorWeb.Format do
   @thousands_separator ","
   @ratio_decimals 2
   @step_number_width 2
-  # Gravity and factors are in thousandths, burn results in millionths.
+  # Gravity and factors are in thousandths.
   @milli_digits 3
-  @micro_digits 6
   @minus "−"
 
   @doc """
@@ -96,18 +95,21 @@ defmodule FuelCalculatorWeb.Format do
   def noun(count, noun) when is_integer(count) and count >= 0 and is_binary(noun), do: noun <> "s"
 
   @doc """
-  The fuel formula for one burn with its exact, unrounded result.
+  The fuel formula worked through for one burn, rounding included.
 
       iex> step = FuelCalculator.FlightStep.new(:land, FuelCalculator.Planet.fetch!(:moon))
       iex> FuelCalculatorWeb.Format.burn(FuelCalculator.burn_formula(100, step))
-      "100 × 1.62 × 0.033 − 42 = −36.654"
+      "⌊100 × 1.62 × 0.033⌋ − 42 = 5 − 42 = −37"
   """
   @spec burn(Burn.t()) :: String.t()
   def burn(%Burn{} = burn) do
-    "#{number(burn.mass_kg)} × #{decimal(burn.gravity_milli, @milli_digits)} × " <>
-      "#{decimal(burn.factor_milli, @milli_digits)} − #{burn.offset_kg} = " <>
-      decimal(burn.result_micro_kg, @micro_digits)
+    "⌊#{number(burn.mass_kg)} × #{decimal(burn.gravity_milli, @milli_digits)} × " <>
+      "#{decimal(burn.factor_milli, @milli_digits)}⌋ − #{burn.offset_kg} = " <>
+      "#{number(burn.product_kg)} − #{burn.offset_kg} = #{signed(burn.fuel_kg)}"
   end
+
+  defp signed(value) when value < 0, do: @minus <> number(-value)
+  defp signed(value) when is_integer(value), do: number(value)
 
   # An exact decimal from an integer count of 10^-digits, without trailing zeros.
   defp decimal(value, digits) when value < 0, do: @minus <> decimal(-value, digits)

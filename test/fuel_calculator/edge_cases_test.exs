@@ -80,6 +80,27 @@ defmodule FuelCalculator.EdgeCasesTest do
       end
     end
 
+    test "rejects a value too long to be a mass instead of cutting it short" do
+      for raw <- [String.duplicate("0", 31) <> "28801", String.duplicate("9", 100)] do
+        evaluation = FuelCalculator.evaluate(params(raw, "land earth"))
+
+        assert %Evaluation{report: nil, error: error} = evaluation
+
+        assert error ==
+                 InvalidMission.new([
+                   FieldError.new([:mass], "Mass must be at most 1,000,000,000 kg.")
+                 ])
+      end
+    end
+
+    test "reads a mass padded with spaces past the length limit" do
+      params = params(String.duplicate(" ", 30) <> "28801", "land earth")
+
+      evaluation = FuelCalculator.evaluate(params)
+
+      assert %Evaluation{report: %FuelReport{total_fuel_kg: 13_447}} = evaluation
+    end
+
     test "asks for a mass when a tampered request sends a number instead of text" do
       params = params(28_801, "land earth")
 

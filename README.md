@@ -24,7 +24,7 @@ three of the spec's missions to the kilogram.
 - **Where the number comes from.** Each step shows its fuel and its mass at
   burn ("ship + fuel for steps 3–4"). Select a step number to see its fuel
   chain. A step that needs no fuel shows the arithmetic
-  (`100 × 1.62 × 0.033 − 42 = −36.654`).
+  (`⌊100 × 1.62 × 0.033⌋ − 42 = 5 − 42 = −37`).
 - **Clear validation.** Mass is whole kilograms from 1 to 1,000,000,000
   (commas allowed, grouped as you type). Invalid input shows a message, and
   the total shows "—" instead of a stale number.

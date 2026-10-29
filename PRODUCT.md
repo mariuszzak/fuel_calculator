@@ -107,8 +107,10 @@ for the three missions).
   calculation already produces.
 - **Invalid input never shows a number.** While the mass is invalid the total
   shows "—" with the reason, so nobody copies a stale value.
-- **A step that needs no fuel shows the arithmetic**, exact and unrounded,
-  e.g. "100 × 1.62 × 0.033 − 42 = −36.654", so a 0 doesn't look like a bug.
+- **A step that needs no fuel shows the arithmetic**, worked through with
+  the rounding, e.g. "⌊100 × 1.62 × 0.033⌋ − 42 = 5 − 42 = −37", so a 0
+  doesn't look like a bug. The rounding matters: 786 kg landing on the Moon
+  gives ⌊42.02⌋ − 42 = 0.
 - **Numbers use a thousands separator**: `51,898 kg`.
 
 ## First visit

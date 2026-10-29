@@ -138,13 +138,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
       <h3 class="text-xs font-semibold uppercase tracking-wider text-muted">
         Fuel chain · the fuel needs fuel too
       </h3>
-      <p :if={@fuel.chain_kg == []} class="text-sm text-muted">
-        This step needs no fuel: for {Format.kg(@fuel.carried_mass_kg)} the formula gives
-        <span class="font-mono text-base-content">
-          {Format.burn(FuelCalculator.burn_formula(@fuel.carried_mass_kg, @fuel.step))}
-        </span>
-        kg, zero or less.
-      </p>
+      <.no_fuel_needed :if={@fuel.chain_kg == []} id={"#{@id}-no-fuel"} fuel={@fuel} />
       <ol :if={@fuel.chain_kg != []} class="flex flex-col gap-1">
         <.chain_link
           :for={{link_kg, position} <- Enum.with_index(@fuel.chain_kg)}
@@ -160,6 +154,25 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
         <span class="text-right font-mono font-bold">{Format.number(@fuel.fuel_kg)}</span>
       </p>
     </div>
+    """
+  end
+
+  @doc """
+  Why a step needs no fuel, with the formula worked through, so a 0 doesn't
+  look like a bug. Shown under the step and in its fuel chain.
+  """
+  attr :id, :string, required: true
+  attr :fuel, StepFuel, required: true
+
+  def no_fuel_needed(assigns) do
+    ~H"""
+    <p id={@id} class="text-[13px] text-muted">
+      No fuel needed:
+      <span class="font-mono text-base-content">
+        {Format.burn(FuelCalculator.burn_formula(@fuel.carried_mass_kg, @fuel.step))}
+      </span>
+      kg, which is zero or less.
+    </p>
     """
   end
 

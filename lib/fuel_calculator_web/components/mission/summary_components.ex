@@ -51,6 +51,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
         <span :if={@report}>
           <.rolling_number id="wet-mass" value={@report.wet_mass_kg} /> kg
         </span>
+        <span :if={!@report} id="wet-mass-unavailable">—</span>
       </.figure>
       <.figure label="Mass ratio (wet / dry)" value={@report && ratio(@report)} mono last_column />
       <.figure label="Route" value={Format.route(@evaluation.steps)} bottom />

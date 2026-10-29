@@ -49,12 +49,20 @@ defmodule FuelCalculator.MissionParams do
   @max_mass_kg 1_000_000_000
   # Longer digit strings are out of range; checked before converting to an integer.
   @max_mass_digits 10
+  # Far beyond any valid mass ("1,000,000,000" is 13 characters), short enough to
+  # parse and render cheaply; RawParams keeps one character more, so a longer
+  # value is rejected instead of being cut into a different, valid number.
+  @max_mass_length 32
 
   @primary_key false
   embedded_schema do
     field(:mass, :string)
     embeds_many(:steps, StepParams, on_replace: :delete)
   end
+
+  @doc false
+  @spec max_mass_length() :: 32
+  def max_mass_length, do: @max_mass_length
 
   @doc false
   @spec step_limit() :: 20
@@ -146,6 +154,9 @@ defmodule FuelCalculator.MissionParams do
 
   defp parse_trimmed_mass(text) do
     cond do
+      String.length(text) > @max_mass_length ->
+        {:error, "Mass must be at most 1,000,000,000 kg."}
+
       not Regex.match?(@mass_format, text) ->
         {:error, "Use whole kilograms, for example 28801 or 28,801."}
 

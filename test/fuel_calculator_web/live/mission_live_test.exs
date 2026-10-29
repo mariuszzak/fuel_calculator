@@ -170,6 +170,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
       assert has_element?(view, "#mass-error", "Mass must be at least 1 kg.")
       assert has_element?(view, "#pinned-total", "—")
+      assert has_element?(view, "#wet-mass-unavailable", "—")
       refute has_element?(view, "#wet-mass")
       refute has_element?(view, "[id^=step-fuel-]")
       assert has_element?(view, "#warning-count", "1 path warning")
@@ -426,7 +427,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       assert has_element?(
                view,
                "#no-fuel-#{@launch_earth}",
-               "1 × 9.807 × 0.042 − 33 = −32.588106"
+               "⌊1 × 9.807 × 0.042⌋ − 33 = 0 − 33 = −33"
              )
     end
 
@@ -436,8 +437,22 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
       click(view, "#step-number-#{@land_earth}")
 
-      assert has_element?(view, "#fuel-chain-#{@land_earth}", "This step needs no fuel")
-      assert has_element?(view, "#fuel-chain-#{@land_earth}", "100 × 9.807 × 0.033 − 42")
+      assert has_element?(
+               view,
+               "#fuel-chain-#{@land_earth}",
+               "No fuel needed: ⌊100 × 9.807 × 0.033⌋ − 42 = 32 − 42 = −10"
+             )
+    end
+
+    test "shows the rounding when the product is just above the offset", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      click(view, "#clear-path")
+      click(view, "#add-step")
+
+      change(view, %{mass: "786", steps: %{"0" => %{action: "land", planet: "moon"}}})
+
+      [id] = row_ids(view)
+      assert has_element?(view, "#no-fuel-#{id}", "⌊786 × 1.62 × 0.033⌋ − 42 = 42 − 42 = 0")
     end
   end
 

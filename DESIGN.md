@@ -149,7 +149,7 @@ a planet-coloured dot with a card-coloured border.
 |---|---|
 | Validation error | Red border on the field, x-circle + message below it (`aria-describedby`). The total shows `—` with the reason. Shown after the debounce or on blur, never on the first keystroke |
 | Path warning | Amber box with a solid triangle, "Check path." + explanation, and two fix buttons: add the missing steps before this one (primary, e.g. "Add Launch from Moon before") and change this step (secondary, e.g. "Change to Launch from Moon"). The step number and the spine's jump line turn amber, and the summary and pinned bar show a badge linking to the first warning. The total stays |
-| Zero-fuel step | `0 kg` with the exact arithmetic under the step and in its fuel chain, e.g. `100 × 1.62 × 0.033 − 42 = −36.654` |
+| Zero-fuel step | `0 kg` with the formula worked through, rounding included, under the step and in its fuel chain, e.g. `⌊100 × 1.62 × 0.033⌋ − 42 = 5 − 42 = −37` |
 | Empty path | "No steps yet" with the three presets; total `—` |
 | Step limit | Add step looks disabled but stays focusable (`aria-disabled`), described by "A flight path holds up to 20 steps." in neutral styling. The same goes for a warning's "Add … before" fix when the steps wouldn't fit |
 | Invalid step or too many steps | x-circle + message on the step ("Choose Earth, Moon or Mars.") or under the path ("A flight path holds up to 20 steps.") |

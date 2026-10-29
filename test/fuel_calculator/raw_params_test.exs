@@ -19,7 +19,7 @@ defmodule FuelCalculator.RawParamsTest do
 
     %{"mass" => mass} = RawParams.normalize(params)
 
-    assert String.length(mass) == 32
+    assert String.length(mass) == 33
   end
 
   test "treats a mass that isn't text as missing" do

@@ -244,7 +244,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
             message={message}
           /><.mass_at_burn :if={@fuel} id={@id} fuel={@fuel} index={@index} count={@count} /><.no_fuel_needed
             :if={@fuel && @fuel.fuel_kg == 0}
-            id={@id}
+            id={"no-fuel-#{@id}"}
             fuel={@fuel}
           /><.path_warning
             :if={@warning}
@@ -487,22 +487,6 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         </li>
       </ul>
     </details>
-    """
-  end
-
-  attr :id, :string, required: true
-  attr :fuel, StepFuel, required: true
-
-  # A zero looks like a bug unless the arithmetic is on screen.
-  defp no_fuel_needed(assigns) do
-    ~H"""
-    <p id={"no-fuel-#{@id}"} class="text-[13px] text-muted">
-      No fuel needed:
-      <span class="font-mono text-base-content">
-        {Format.burn(FuelCalculator.burn_formula(@fuel.carried_mass_kg, @fuel.step))}
-      </span>
-      kg, which is zero or less.
-    </p>
     """
   end
 

@@ -86,11 +86,12 @@ defmodule FuelCalculator.Fuel do
   end
 
   @doc """
-  The formula for one burn of `mass_kg`, before rounding down.
+  The formula worked through for one burn of `mass_kg`.
 
       iex> alias FuelCalculator.{Fuel, FlightStep, Planet}
-      iex> Fuel.formula(100, FlightStep.new(:land, Planet.fetch!(:moon))).result_micro_kg
-      -36_654_000
+      iex> burn = Fuel.formula(100, FlightStep.new(:land, Planet.fetch!(:moon)))
+      iex> {burn.product_kg, burn.fuel_kg}
+      {5, -37}
   """
   @spec formula(pos_integer(), FlightStep.t()) :: Burn.t()
   def formula(mass_kg, %FlightStep{action: action, planet: %Planet{gravity_milli: gravity_milli}})
@@ -99,8 +100,8 @@ defmodule FuelCalculator.Fuel do
     Burn.new(mass_kg, gravity_milli, factor, offset)
   end
 
-  defp burn(mass_kg, %FlightStep{action: action, planet: %Planet{gravity_milli: gravity_milli}}) do
-    {factor, offset} = Map.fetch!(@formula, action)
-    Integer.floor_div(mass_kg * gravity_milli * factor, @scale) - offset
+  defp burn(mass_kg, %FlightStep{} = step) do
+    %Burn{fuel_kg: fuel_kg} = formula(mass_kg, step)
+    fuel_kg
   end
 end
