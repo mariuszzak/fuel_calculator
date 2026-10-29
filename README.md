@@ -9,6 +9,11 @@ where the number comes from.
 Built for the [Elixir full-stack challenge](docs/CHALLENGE.md). It matches all
 three of the spec's missions to the kilogram.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/desktop-dark.png">
+  <img src="docs/screenshots/desktop-light.png" alt="The mission planner with the Apollo 11 example: 28,801 kg of equipment, 51,898 kg of fuel in total, and four steps on the flight spine. The first step, launch from Earth, is selected and shows its fuel chain.">
+</picture>
+
 ## Features
 
 - **Live total.** Fuel, wet mass (ship + fuel), mass ratio and route update
@@ -32,6 +37,12 @@ three of the spec's missions to the kilogram.
   your edits.
 - Light and dark themes, a phone layout down to 320px, keyboard and
   screen-reader support.
+
+<p align="center">
+  <img src="docs/screenshots/phone-light.png" width="260" alt="The Apollo 11 example on a phone, light theme">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/phone-dark.png" width="260" alt="The Apollo 11 example on a phone, dark theme">
+</p>
 
 ## Quick start
 
