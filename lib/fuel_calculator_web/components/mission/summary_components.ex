@@ -1,0 +1,127 @@
+defmodule FuelCalculatorWeb.Mission.SummaryComponents do
+  @moduledoc """
+  The mission summary panel: total fuel on the highlighter band and the key
+  figures next to it.
+  """
+
+  use FuelCalculatorWeb, :html
+
+  alias FuelCalculator.Error.FieldError
+  alias FuelCalculator.Error.InvalidMission
+  alias FuelCalculator.Evaluation
+  alias FuelCalculator.FuelReport
+  alias FuelCalculatorWeb.Format
+
+  @doc "The summary panel for the current evaluation."
+  attr :evaluation, Evaluation, required: true
+
+  def summary_panel(assigns) do
+    %Evaluation{report: report} = assigns.evaluation
+    assigns = assign(assigns, :report, shown_report(report))
+
+    ~H"""
+    <section
+      id="summary"
+      aria-labelledby="summary-heading"
+      class="grid grid-cols-2 overflow-hidden rounded-box border border-rule-strong bg-base-100"
+    >
+      <div class="col-span-2 flex flex-col gap-1.5 border-b border-rule px-5 py-4">
+        <div class="flex items-center justify-between gap-2">
+          <h2 id="summary-heading" class="text-xs font-semibold uppercase tracking-wider text-muted">
+            Total fuel required
+          </h2>
+          <.warning_badge count={length(@evaluation.warnings)} />
+        </div>
+        <.total_fuel :if={@report} report={@report} />
+        <.no_total :if={!@report} reason={no_total_reason(@evaluation)} />
+      </div>
+      <.figure label="Wet mass (ship + fuel)" value={@report && Format.kg(@report.wet_mass_kg)} mono />
+      <.figure label="Mass ratio (wet / dry)" value={@report && ratio(@report)} mono last_column />
+      <.figure label="Route" value={Format.route(@evaluation.steps)} bottom />
+      <.figure label="Steps" value={step_count(@evaluation)} mono bottom last_column />
+    </section>
+    """
+  end
+
+  # A report for an empty path is valid but has nothing to show as a total.
+  defp shown_report(%FuelReport{steps: [_ | _]} = report), do: report
+  defp shown_report(%FuelReport{steps: []}), do: nil
+  defp shown_report(nil), do: nil
+
+  defp ratio(%FuelReport{wet_mass_kg: wet, mission: mission}),
+    do: Format.ratio(wet, mission.mass_kg)
+
+  defp step_count(%Evaluation{step_ids: step_ids, step_limit: limit}),
+    do: "#{length(step_ids)} / #{limit}"
+
+  defp no_total_reason(%Evaluation{report: %FuelReport{steps: []}}), do: "Add at least one step."
+
+  defp no_total_reason(%Evaluation{error: %InvalidMission{errors: errors}}) do
+    if Enum.any?(errors, &match?(%FieldError{path: [:mass]}, &1)),
+      do: "Fix the mass to see the total.",
+      else: "Fix the flight path to see the total."
+  end
+
+  attr :report, FuelReport, required: true
+
+  defp total_fuel(assigns) do
+    ~H"""
+    <p class="flex items-baseline gap-2.5">
+      <output
+        id="total-fuel"
+        class="fuel-mark font-mono text-4xl font-bold leading-none sm:text-[56px]"
+      >
+        {Format.number(@report.total_fuel_kg)}
+      </output>
+      <span class="font-mono text-lg text-muted">kg</span>
+    </p>
+    """
+  end
+
+  attr :reason, :string, required: true
+
+  defp no_total(assigns) do
+    ~H"""
+    <div class="flex flex-col gap-1">
+      <output id="total-fuel" class="font-mono text-5xl leading-none text-muted">—</output>
+      <span id="no-total-reason" class="text-sm text-muted">{@reason}</span>
+    </div>
+    """
+  end
+
+  attr :count, :integer, required: true
+
+  defp warning_badge(assigns) do
+    ~H"""
+    <span
+      :if={@count > 0}
+      id="warning-count"
+      class="flex items-center gap-1.5 rounded-full border border-dashed border-neutral px-2.5 text-xs font-semibold"
+    >
+      <.icon name="hero-exclamation-triangle-micro" class="size-3" />
+      {@count} path {if @count == 1, do: "warning", else: "warnings"}
+    </span>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :value, :string, default: nil
+  attr :mono, :boolean, default: false
+  attr :last_column, :boolean, default: false
+  attr :bottom, :boolean, default: false
+
+  defp figure(assigns) do
+    ~H"""
+    <div class={[
+      "px-5 py-2.5",
+      !@last_column && "border-r border-rule",
+      !@bottom && "border-b border-rule"
+    ]}>
+      <div class="text-xs text-muted">{@label}</div>
+      <div class={["text-[15px]", if(@mono, do: "font-mono", else: "font-semibold")]}>
+        {@value || "—"}
+      </div>
+    </div>
+    """
+  end
+end

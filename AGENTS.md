@@ -166,6 +166,20 @@ Companion documents:
   for closed sets — one whitelist, never arbitrary atoms.
 - Bound untrusted input before processing it (string lengths, list sizes).
 
+### Named values
+
+- No magic numbers: give literal values the code depends on a named module
+  attribute with a short comment on why that value (`@max_steps 20`,
+  `@mass_debounce_ms 250`). Domain data (a planet's gravity, a preset's mass)
+  and styling values in CSS classes are fine inline.
+
+### Phoenix components
+
+- Prefer small, focused function components. Split a component when it
+  renders several distinct parts or gets hard to read; group related ones in
+  a module (`FuelCalculatorWeb.Mission.FlightPathComponents`) and keep
+  helpers private unless another module needs them.
+
 ### Tooling
 
 - `mix format`, `mix compile --warnings-as-errors`, `credo --strict` and

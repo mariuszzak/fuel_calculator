@@ -12,63 +12,45 @@ defmodule FuelCalculatorWeb.Layouts do
   embed_templates "layouts/*"
 
   @doc """
-  Renders your app layout.
-
-  This function is typically invoked from every template,
-  and it often contains your application menu, sidebar,
-  or similar.
-
-  ## Examples
+  The app layout: header with the wordmark and theme toggle, then the page.
 
       <Layouts.app flash={@flash}>
-        <h1>Content</h1>
+        ...
       </Layouts.app>
-
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
-
-  attr :current_scope, :map,
-    default: nil,
-    doc: "the current [scope](https://phoenix.hexdocs.pm/scopes.html)"
-
   slot :inner_block, required: true
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
-      <div class="flex-1">
-        <a href="/" class="flex-1 flex w-fit items-center gap-2">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">v{Application.spec(:phoenix, :vsn)}</span>
+    <div class="min-h-screen bg-base-200 text-base-content font-sans">
+      <header class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pt-6 sm:px-10">
+        <a href={~p"/"} class="flex items-center gap-3">
+          <svg width="34" height="24" viewBox="0 0 34 24" aria-hidden="true">
+            <path d="M2 21 H32" class="stroke-neutral" stroke-width="1.5" />
+            <path
+              d="M4 21 C6 10, 12 4, 30 3"
+              fill="none"
+              class="stroke-accent"
+              stroke-width="2.4"
+              stroke-linecap="round"
+            />
+            <circle cx="4" cy="21" r="2.6" class="fill-accent" />
+          </svg>
+          <span class="flex flex-col">
+            <span class="font-mono text-[15px] font-bold tracking-wider">FUEL/CALC</span>
+            <span class="text-[13px] text-muted">Interplanetary launch and landing fuel</span>
+          </span>
         </a>
-      </div>
-      <div class="flex-none">
-        <ul class="flex flex-column px-1 space-x-4 items-center">
-          <li>
-            <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a>
-          </li>
-          <li>
-            <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
-          </li>
-          <li>
-            <.theme_toggle />
-          </li>
-          <li>
-            <a href="https://phoenix.hexdocs.pm/overview.html" class="btn btn-primary">
-              Get Started <span aria-hidden="true">&rarr;</span>
-            </a>
-          </li>
-        </ul>
-      </div>
-    </header>
+        <.theme_toggle />
+      </header>
 
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl space-y-4">
+      <main class="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-10">
         {render_slot(@inner_block)}
-      </div>
-    </main>
+      </main>
 
-    <.flash_group flash={@flash} />
+      <.flash_group flash={@flash} />
+    </div>
     """
   end
 
@@ -135,6 +117,7 @@ defmodule FuelCalculatorWeb.Layouts do
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
+        aria-label="Use the system theme"
       >
         <.icon name="hero-computer-desktop-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>
@@ -143,6 +126,7 @@ defmodule FuelCalculatorWeb.Layouts do
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
+        aria-label="Use the light theme"
       >
         <.icon name="hero-sun-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>
@@ -151,6 +135,7 @@ defmodule FuelCalculatorWeb.Layouts do
         class="flex p-2 cursor-pointer w-1/3"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
+        aria-label="Use the dark theme"
       >
         <.icon name="hero-moon-micro" class="size-4 opacity-75 hover:opacity-100" />
       </button>

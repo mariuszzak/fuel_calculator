@@ -23,8 +23,8 @@ looks, moves and reads.
 
 ## Themes
 
-Two DaisyUI 5 themes: `fuel-light` (default) and `fuel-dark` (used when the
-system prefers dark). The Phoenix 1.8 theme toggle offers system / light /
+Two DaisyUI 5 themes named `light` (default) and `dark` (used when the system
+prefers dark), so Phoenix's theme toggle works unchanged. The Phoenix 1.8 theme toggle offers system / light /
 dark.
 
 ### Tokens
@@ -68,7 +68,7 @@ Any new colour pair must be measured and meet these targets before it ships.
 
 ```css
 @plugin "daisyui/theme" {
-  name: "fuel-light"; default: true; color-scheme: light;
+  name: "light"; default: true; color-scheme: light;
   --color-base-100: #F6F8FB;
   --color-base-200: #E9EEF4;
   --color-base-300: #DCE3EB;
@@ -86,7 +86,7 @@ Any new colour pair must be measured and meet these targets before it ships.
 }
 
 @plugin "daisyui/theme" {
-  name: "fuel-dark"; prefersdark: true; color-scheme: dark;
+  name: "dark"; prefersdark: true; color-scheme: dark;
   --color-base-100: #1E2630;
   --color-base-200: #161C24;
   --color-base-300: #27313D;

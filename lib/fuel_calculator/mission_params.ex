@@ -57,6 +57,10 @@ defmodule FuelCalculator.MissionParams do
   end
 
   @doc false
+  @spec step_limit() :: 20
+  def step_limit, do: @max_steps
+
+  @doc false
   @spec room_for_another_step?(non_neg_integer()) :: boolean()
   def room_for_another_step?(step_count) when is_integer(step_count) and step_count >= 0,
     do: step_count < @max_steps
@@ -89,6 +93,21 @@ defmodule FuelCalculator.MissionParams do
     |> get_embed(:steps, :changeset)
     |> Enum.filter(& &1.valid?)
     |> Enum.map(fn %Ecto.Changeset{} = step -> step |> apply_changes() |> to_flight_step() end)
+  end
+
+  @doc false
+  # The submitted step ids in order, including steps that are otherwise invalid.
+  @spec step_ids(Ecto.Changeset.t()) :: [String.t() | nil]
+  def step_ids(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> get_embed(:steps, :changeset)
+    |> Enum.map(fn %Ecto.Changeset{} = step -> get_field(step, :id) end)
+  end
+
+  @doc false
+  @spec steps_valid?(Ecto.Changeset.t()) :: boolean()
+  def steps_valid?(%Ecto.Changeset{} = changeset) do
+    changeset |> get_embed(:steps, :changeset) |> Enum.all?(& &1.valid?)
   end
 
   defp to_flight_step(%StepParams{action: action, planet: planet_id}) do

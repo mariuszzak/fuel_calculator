@@ -14,6 +14,10 @@ defmodule FuelCalculator.Fuel do
   @formula %{launch: {42, 33}, land: {33, 42}}
   @scale 1_000_000
 
+  # The largest gravity × factor product (scaled) a planet may have: a ratio of
+  # 0.5, so each link of the fuel chain is at most half the mass it lifts.
+  @max_link_product div(@scale, 2)
+
   # Each link of the fuel chain must be less than half the mass it lifts
   # (gravity * factor <= 0.5), so the chain ends quickly: fewer than about 45
   # links even for the heaviest missions. Earth launch, the worst case, is 0.41.
@@ -21,7 +25,7 @@ defmodule FuelCalculator.Fuel do
   # would never end.
   for %Planet{} = planet <- Planet.all(),
       {action, {factor, _offset}} <- @formula,
-      planet.gravity_milli * factor * 2 > @scale do
+      planet.gravity_milli * factor > @max_link_product do
     raise CompileError,
       description:
         "#{planet.name} is too heavy for #{action}: gravity × factor must be at most 0.5 " <>

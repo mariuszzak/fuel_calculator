@@ -1,0 +1,91 @@
+defmodule FuelCalculatorWeb.Format do
+  @moduledoc """
+  Turns domain values into the text the UI shows.
+  """
+
+  alias FuelCalculator.FlightStep
+  alias FuelCalculator.Planet
+
+  @thousands_group 3
+  @thousands_separator ","
+  @ratio_decimals 2
+  @step_number_width 2
+
+  @doc """
+  Formats a whole number with thousands separators.
+
+      iex> FuelCalculatorWeb.Format.number(51_898)
+      "51,898"
+  """
+  @spec number(non_neg_integer()) :: String.t()
+  def number(value) when is_integer(value) and value >= 0 do
+    value
+    |> Integer.to_string()
+    |> String.reverse()
+    |> String.to_charlist()
+    |> Enum.chunk_every(@thousands_group)
+    |> Enum.join(@thousands_separator)
+    |> String.reverse()
+  end
+
+  @doc """
+  Formats a mass in kilograms.
+
+      iex> FuelCalculatorWeb.Format.kg(80_699)
+      "80,699 kg"
+  """
+  @spec kg(non_neg_integer()) :: String.t()
+  def kg(value) when is_integer(value) and value >= 0, do: number(value) <> " kg"
+
+  @doc """
+  The wet-to-dry mass ratio, e.g. how many times heavier the fuelled ship is.
+
+      iex> FuelCalculatorWeb.Format.ratio(80_699, 28_801)
+      "×2.80"
+  """
+  @spec ratio(pos_integer(), pos_integer()) :: String.t()
+  def ratio(wet_kg, dry_kg) when is_integer(wet_kg) and is_integer(dry_kg) and dry_kg > 0 do
+    "×" <> :erlang.float_to_binary(wet_kg / dry_kg, decimals: @ratio_decimals)
+  end
+
+  @doc """
+  Describes a step the way people say it.
+
+      iex> step = FuelCalculator.FlightStep.new(:land, FuelCalculator.Planet.fetch!(:moon))
+      iex> FuelCalculatorWeb.Format.step(step)
+      "Land on Moon"
+  """
+  @spec step(FlightStep.t()) :: String.t()
+  def step(%FlightStep{action: :launch, planet: %Planet{name: name}}), do: "Launch from " <> name
+  def step(%FlightStep{action: :land, planet: %Planet{name: name}}), do: "Land on " <> name
+
+  @doc """
+  The planets a path visits, without repeating consecutive ones.
+
+      iex> path = Enum.map([launch: :earth, land: :moon, launch: :moon, land: :earth], fn {a, p} ->
+      ...>   FuelCalculator.FlightStep.new(a, FuelCalculator.Planet.fetch!(p))
+      ...> end)
+      iex> FuelCalculatorWeb.Format.route(path)
+      "Earth → Moon → Earth"
+  """
+  @spec route([FlightStep.t()]) :: String.t()
+  def route([]), do: "—"
+
+  def route(steps) when is_list(steps) do
+    steps
+    |> Enum.map(fn %FlightStep{planet: %Planet{name: name}} -> name end)
+    |> Enum.dedup()
+    |> Enum.join(" → ")
+  end
+
+  @doc """
+  A two-digit step number for display, e.g. `"03"`.
+
+      iex> FuelCalculatorWeb.Format.step_number(2)
+      "03"
+  """
+  @spec step_number(non_neg_integer()) :: String.t()
+  def step_number(index) when is_integer(index) and index >= 0 do
+    index |> Kernel.+(1) |> Integer.to_string() |> String.pad_leading(@step_number_width, "0")
+  end
+end

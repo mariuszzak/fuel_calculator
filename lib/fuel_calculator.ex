@@ -47,12 +47,16 @@ defmodule FuelCalculator do
         {:error, %InvalidMission{} = error} -> {:error, error}
       end
 
+    warnings = if MissionParams.steps_valid?(changeset), do: FlightPath.warnings(steps), else: []
+
     Evaluation.new(
       Map.put(changeset, :action, :validate),
+      MissionParams.step_ids(changeset),
       steps,
       result,
-      FlightPath.warnings(steps),
-      FlightPath.next_step(steps)
+      warnings,
+      FlightPath.next_step(steps),
+      MissionParams.step_limit()
     )
   end
 
