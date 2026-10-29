@@ -64,12 +64,12 @@ defmodule FuelCalculator.FuelTest do
       assert Enum.map(steps, fn %StepFuel{fuel_kg: kg} -> kg end) == [32_988, 2462, 3001, 13_447]
     end
 
-    test "reports the launch mass as equipment plus all fuel" do
+    test "reports the wet mass as equipment plus all fuel" do
       apollo = mission(28_801, "launch earth, land moon, launch moon, land earth")
 
       report = Fuel.for_mission(apollo)
 
-      assert %FuelReport{total_fuel_kg: 51_898, launch_mass_kg: 80_699} = report
+      assert %FuelReport{total_fuel_kg: 51_898, wet_mass_kg: 80_699} = report
     end
 
     test "needs no fuel for an empty flight path" do
@@ -77,7 +77,49 @@ defmodule FuelCalculator.FuelTest do
 
       report = Fuel.for_mission(parked)
 
-      assert %FuelReport{steps: [], total_fuel_kg: 0, launch_mass_kg: 28_801} = report
+      assert %FuelReport{steps: [], total_fuel_kg: 0, wet_mass_kg: 28_801} = report
+    end
+  end
+
+  describe "the zero-fuel threshold" do
+    # The largest mass that needs no fuel, and the smallest that needs 1 kg, for
+    # every action and planet. Guards against `> 0` vs `>= 0` in the stop rule.
+    for {path, last_zero_kg} <- [
+          {"launch earth", 82},
+          {"launch moon", 499},
+          {"launch mars", 218},
+          {"land earth", 132},
+          {"land moon", 804},
+          {"land mars", 351}
+        ] do
+      test "#{path}: #{last_zero_kg} kg needs nothing, #{last_zero_kg + 1} kg needs 1 kg" do
+        flight_step = step(unquote(path))
+
+        lighter = Fuel.for_step(unquote(last_zero_kg), flight_step)
+        heavier = Fuel.for_step(unquote(last_zero_kg) + 1, flight_step)
+
+        assert %StepFuel{chain_kg: [], fuel_kg: 0} = lighter
+        assert %StepFuel{chain_kg: [1], fuel_kg: 1} = heavier
+      end
+    end
+  end
+
+  describe "large missions" do
+    test "stays exact where floating-point arithmetic is off by one" do
+      # Carried mass reaches ~4e13 kg here; a float implementation gives ...525.
+      heavy = mission(797_164_543, Enum.map_join(1..20, ", ", fn _n -> "launch earth" end))
+
+      report = Fuel.for_mission(heavy)
+
+      assert %FuelReport{total_fuel_kg: 32_540_503_908_524} = report
+    end
+
+    test "calculates a disconnected path as written" do
+      disconnected = mission(28_801, "launch earth, land moon, launch mars, land earth")
+
+      report = Fuel.for_mission(disconnected)
+
+      assert %FuelReport{total_fuel_kg: 60_259} = report
     end
   end
 

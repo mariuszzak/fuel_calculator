@@ -14,15 +14,18 @@ defmodule FuelCalculator.Fuel do
   @formula %{launch: {42, 33}, land: {33, 42}}
   @scale 1_000_000
 
-  # The fuel chain only terminates when gravity * factor < 1: each iteration must
-  # need less fuel than the mass it lifts. Fail the build if a planet breaks that.
+  # Each link of the fuel chain must be less than half the mass it lifts
+  # (gravity * factor <= 0.5), so the chain ends quickly: fewer than about 45
+  # links even for the heaviest missions. Earth launch, the worst case, is 0.41.
+  # Fail the build if a planet breaks that; with a ratio of 1 or more the chain
+  # would never end.
   for %Planet{} = planet <- Planet.all(),
       {action, {factor, _offset}} <- @formula,
-      planet.gravity_milli * factor >= @scale do
+      planet.gravity_milli * factor * 2 > @scale do
     raise CompileError,
       description:
-        "#{planet.name} is too heavy for #{action}: gravity × factor must be below 1 " <>
-          "or the fuel chain never ends"
+        "#{planet.name} is too heavy for #{action}: gravity × factor must be at most 0.5 " <>
+          "so the fuel chain stays short"
   end
 
   @doc """

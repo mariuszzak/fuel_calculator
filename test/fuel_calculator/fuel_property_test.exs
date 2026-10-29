@@ -11,7 +11,15 @@ defmodule FuelCalculator.FuelPropertyTest do
 
   @max_mass_kg 1_000_000_000
 
-  defp mass_kg, do: integer(1..@max_mass_kg)
+  # Uniform masses almost never land near the interesting edges, so weight
+  # the generator towards light ships (where fuel is zero or tiny) and the limits.
+  defp mass_kg do
+    frequency([
+      {3, integer(1..@max_mass_kg)},
+      {3, integer(1..2_000)},
+      {1, member_of([1, @max_mass_kg])}
+    ])
+  end
 
   defp flight_step do
     gen all action <- member_of(FlightStep.actions()),
@@ -20,17 +28,18 @@ defmodule FuelCalculator.FuelPropertyTest do
     end
   end
 
-  defp mission do
-    gen all mass_kg <- mass_kg(),
-            steps <- list_of(flight_step(), max_length: 20) do
-      Mission.new(mass_kg, steps)
+  defp mission(mass_kg_generator \\ mass_kg(), max_steps \\ 20) do
+    gen all mass_kg <- mass_kg_generator,
+            steps <- list_of(flight_step(), max_length: max_steps) do
+      Mission.new!(mass_kg, steps)
     end
   end
 
   # A deliberately naive reference, written straight from the spec with floats:
   # recursion per step, missions summed from the last step backwards. Floats are
-  # exact enough within our mass limit, so it must agree with the integer version.
-  defp reference_step_fuel(mass_kg, %FlightStep{action: action, planet: planet}) do
+  # only exact while the carried mass stays small (see the large-mission test in
+  # fuel_test.exs), so this cross-check uses light missions with few steps.
+  defp reference_step_fuel(mass_kg, %FlightStep{action: action, planet: planet} = step) do
     gravity = planet.gravity_milli / 1000
 
     fuel =
@@ -40,7 +49,7 @@ defmodule FuelCalculator.FuelPropertyTest do
       end
 
     if fuel > 0,
-      do: fuel + reference_step_fuel(fuel, %FlightStep{action: action, planet: planet}),
+      do: fuel + reference_step_fuel(fuel, step),
       else: 0
   end
 
@@ -52,8 +61,8 @@ defmodule FuelCalculator.FuelPropertyTest do
     end)
   end
 
-  property "agrees with a naive floating-point reference within the mass limit" do
-    check all mission <- mission() do
+  property "agrees with a naive floating-point reference for light missions" do
+    check all mission <- mission(integer(1..10_000_000), 6) do
       %FuelReport{total_fuel_kg: total} = Fuel.for_mission(mission)
 
       assert total == reference_total(mission)
@@ -97,7 +106,7 @@ defmodule FuelCalculator.FuelPropertyTest do
   property "adding a step never lowers the total" do
     check all %Mission{mass_kg: mass_kg, steps: steps} = mission <- mission(),
               extra <- flight_step() do
-      longer = Mission.new(mass_kg, steps ++ [extra])
+      longer = Mission.new!(mass_kg, steps ++ [extra])
 
       %FuelReport{total_fuel_kg: before} = Fuel.for_mission(mission)
       %FuelReport{total_fuel_kg: after_adding} = Fuel.for_mission(longer)

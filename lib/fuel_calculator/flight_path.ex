@@ -47,31 +47,34 @@ defmodule FuelCalculator.FlightPath do
   end
 
   # `location` is :unknown (before the first step), :in_flight or a %Planet{}.
+  # Each warning offers the missing steps to insert before the step, or a step
+  # to replace it with; both keep the planet the user picked where possible.
   defp check(%FlightStep{action: :launch}, :unknown, _index), do: []
 
   defp check(%FlightStep{action: :launch, planet: %Planet{} = planet}, :in_flight, index) do
-    [PathWarning.new(index, :launch_while_in_flight, nil, FlightStep.new(:land, planet))]
+    land_there = FlightStep.new(:land, planet)
+    [PathWarning.new(index, :launch_while_in_flight, nil, [land_there], land_there)]
   end
 
   defp check(%FlightStep{action: :launch, planet: %Planet{id: id}}, %Planet{id: id}, _index),
     do: []
 
-  defp check(%FlightStep{action: :launch}, %Planet{} = location, index) do
-    [
-      PathWarning.new(
-        index,
-        :launch_from_other_planet,
-        location,
-        FlightStep.new(:launch, location)
-      )
-    ]
+  defp check(
+         %FlightStep{action: :launch, planet: %Planet{} = planet},
+         %Planet{} = location,
+         index
+       ) do
+    leave = FlightStep.new(:launch, location)
+    insertion = [leave, FlightStep.new(:land, planet)]
+    [PathWarning.new(index, :launch_from_other_planet, location, insertion, leave)]
   end
 
   defp check(%FlightStep{action: :land}, :unknown, _index), do: []
   defp check(%FlightStep{action: :land}, :in_flight, _index), do: []
 
   defp check(%FlightStep{action: :land}, %Planet{} = location, index) do
-    [PathWarning.new(index, :land_while_landed, location, FlightStep.new(:launch, location))]
+    leave = FlightStep.new(:launch, location)
+    [PathWarning.new(index, :land_while_landed, location, [leave], leave)]
   end
 
   defp location_after(%FlightStep{action: :launch}), do: :in_flight

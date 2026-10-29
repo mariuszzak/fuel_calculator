@@ -34,14 +34,17 @@ for the three missions).
 ## Calculation
 
 - **Exact integer arithmetic.** Gravity is stored in thousandths (Earth 9807,
-  Moon 1620, Mars 3711) and the formula uses integer floor division. Floats
-  happen to give the same results up to our mass limit, but proving that takes
-  an error analysis; integers are exact by construction and keep working if
-  the limit changes. It costs one extra concept, explained in a doc comment.
-- **Every planet must make the chain terminate.** The recursion only stops
-  because gravity × 0.042 is below 1 for every planet (Earth: 0.41). A
-  heavier planet would make fuel grow forever, so the planet list is checked
-  at compile time and in a test. Adding a planet stays a one-line change.
+  Moon 1620, Mars 3711) and the formula uses integer floor division. Floats are
+  not good enough: the equipment mass is capped at 10⁹ kg, but the mass a burn
+  carries (ship plus all later fuel) can reach about 4×10¹³ kg, and there
+  floats round wrongly. For 797,164,543 kg and 20 launches from Earth, floats
+  give 1 kg too much. Integers are exact by construction; a test pins that
+  case.
+- **Every planet must keep the fuel chain short.** Each link of the chain must
+  be at most half the mass it lifts (gravity × 0.042 ≤ 0.5; Earth is 0.41), so
+  even the heaviest mission needs fewer than about 45 links per step. At 1 or
+  more the chain would never end. A planet that breaks the rule fails the
+  build, so adding a planet stays a one-line change.
 - **Calculations on validated input cannot fail**, so they return their
   result directly instead of a success tuple; there is no error path for
   callers to handle that can never happen.
@@ -79,16 +82,21 @@ for the three missions).
   change. The suggestion can be changed after adding.
 - **The path is checked for physical sense, but never blocked.** Launching
   from a planet the ship isn't on, launching while in flight, or landing
-  while landed shows a warning with a one-tap fix (e.g. "Launch from Moon
-  instead"). The total is still calculated: the formula doesn't depend on
-  continuity, and users may want to model a single leg.
+  while landed shows a warning with two one-tap fixes:
+  - **add the missing steps before this one** (e.g. "Add Launch from Moon
+    before"), which keeps what the user entered and repairs a path with a
+    step left out in one tap;
+  - **change this step** (e.g. "Change to Launch from Moon").
+
+  The total is still calculated: the formula doesn't depend on continuity,
+  and users may want to model a single leg.
 - **Removing a step, clearing the path or loading a preset over edits can be
   undone** for a few seconds, so these actions need no confirmation dialog.
 
 ## Results
 
-- **The total is the largest thing on the screen**, with the launch mass
-  (ship plus fuel), the mass ratio, the route and the step count next to it.
+- **The total is the largest thing on the screen**, with the wet mass
+  (ship plus all fuel), the mass ratio, the route and the step count next to it.
 - **Each step shows its fuel and its mass at burn** (ship plus fuel for all
   later steps), and the selected step shows its fuel chain. This explains
   the backward pass without a lecture, and every number on screen is one the

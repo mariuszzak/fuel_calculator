@@ -60,6 +60,6 @@ defmodule FuelCalculator.Preset do
         FlightStep.new(action, Planet.fetch!(planet_id))
       end)
 
-    %__MODULE__{id: id, name: name, mission: Mission.new(mass_kg, steps)}
+    %__MODULE__{id: id, name: name, mission: Mission.new!(mass_kg, steps)}
   end
 end

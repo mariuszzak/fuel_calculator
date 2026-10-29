@@ -74,7 +74,7 @@ defmodule FuelCalculator.MissionParams do
     case apply_action(changeset, :validate) do
       {:ok, %__MODULE__{mass: mass, steps: steps}} ->
         {:ok, mass_kg} = parse_mass(mass)
-        {:ok, Mission.new(mass_kg, Enum.map(steps, &to_flight_step/1))}
+        {:ok, Mission.new!(mass_kg, Enum.map(steps, &to_flight_step/1))}
 
       {:error, %Ecto.Changeset{} = invalid} ->
         {:error, invalid_mission(invalid)}

@@ -45,6 +45,26 @@ defmodule FuelCalculator.ParamsEditor do
     put_steps(params, updated)
   end
 
+  @spec insert_before(params(), String.t(), [FlightStep.t(), ...]) :: params()
+  def insert_before(params, step_id, [%FlightStep{} | _] = new_steps)
+      when is_map(params) and is_binary(step_id) do
+    steps = steps(params)
+    index = Enum.find_index(steps, &has_id?(&1, step_id))
+    fits? = MissionParams.room_for_another_step?(length(steps) + length(new_steps) - 1)
+
+    case {index, fits?} do
+      {nil, _fits?} ->
+        params
+
+      {_index, false} ->
+        params
+
+      {index, true} ->
+        {before, rest} = Enum.split(steps, index)
+        put_steps(params, before ++ Enum.map(new_steps, &step_params/1) ++ rest)
+    end
+  end
+
   @spec move_step(params(), String.t(), :up | :down) :: params()
   def move_step(params, step_id, direction)
       when is_map(params) and is_binary(step_id) and direction in [:up, :down] do

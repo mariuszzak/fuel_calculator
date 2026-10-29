@@ -138,7 +138,7 @@ Desktop, one column of content, max width about 1240px.
 2. **Spacecraft + summary row:**
    - Left: equipment mass input with a `kg` unit and the "Start from" preset
      buttons.
-   - Right: the summary panel. Total fuel on the highlighter band, then launch
+   - Right: the summary panel. Total fuel on the highlighter band, then wet
      mass, mass ratio, route, and steps out of 20. A path-warning badge
      appears here when the path has warnings.
 3. **Flight path:** one row per step, in flight order.
@@ -170,7 +170,7 @@ except the toast. Separate rows with rules rather than nested cards.
 | State | Treatment |
 |---|---|
 | Validation error | Red border on the field, x-circle + message below it (`aria-describedby`). The total shows `—` with the reason. Shown after the debounce or on blur, never on the first keystroke |
-| Path warning | Dashed neutral outline, triangle, "Check path." + explanation, and a one-tap fix button (e.g. "Launch from Moon instead"). The total stays |
+| Path warning | Dashed neutral outline, triangle, "Check path." + explanation, and two fix buttons: add the missing steps before this one (primary, e.g. "Add Launch from Moon before") and change this step (secondary, e.g. "Change to Launch from Moon"). The total stays |
 | Zero-fuel step | `0 kg` with the arithmetic shown, e.g. `100 × 1.62 × 0.033 − 42 = −36.65` |
 | Empty path | "No steps yet" with the three presets; total `—` |
 | Step limit | Add step disabled with "A flight path holds up to 20 steps." in neutral styling |

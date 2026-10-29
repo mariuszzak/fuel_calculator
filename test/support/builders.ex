@@ -10,7 +10,7 @@ defmodule FuelCalculator.Builders do
   alias FuelCalculator.Planet
 
   @spec mission(pos_integer(), String.t()) :: Mission.t()
-  def mission(mass_kg, path), do: Mission.new(mass_kg, steps(path))
+  def mission(mass_kg, path), do: Mission.new!(mass_kg, steps(path))
 
   @spec steps(String.t()) :: [FlightStep.t()]
   def steps(""), do: []

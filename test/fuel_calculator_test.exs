@@ -10,7 +10,6 @@ defmodule FuelCalculatorTest do
   alias FuelCalculator.FuelReport
   alias FuelCalculator.Mission
   alias FuelCalculator.PathWarning
-  alias FuelCalculator.Planet
 
   defp params(mass, path) do
     steps =
@@ -124,13 +123,8 @@ defmodule FuelCalculatorTest do
 
       evaluation = FuelCalculator.evaluate(params)
 
-      moon = Planet.fetch!(:moon)
-
       assert %Evaluation{report: nil, warnings: warnings, next_step: next_step} = evaluation
-
-      assert warnings == [
-               PathWarning.new(2, :launch_from_other_planet, moon, step("launch moon"))
-             ]
+      assert [%PathWarning{step_index: 2, kind: :launch_from_other_planet}] = warnings
 
       assert next_step == step("land earth")
     end
@@ -292,9 +286,37 @@ defmodule FuelCalculatorTest do
       assert params |> FuelCalculator.remove_step("nope") |> step_ids() == ["step-0", "step-1"]
     end
 
-    test "applies a warning's suggested fix in place, keeping the step's id" do
+    test "inserts a warning's missing steps before the flagged step" do
+      params = params("28801", "launch earth, land moon, launch mars, land earth")
+      %Evaluation{warnings: [%PathWarning{insertion: missing}]} = FuelCalculator.evaluate(params)
+
+      updated = FuelCalculator.insert_steps_before(params, "step-2", missing)
+
+      assert step_texts(updated) ==
+               [
+                 "launch earth",
+                 "land moon",
+                 "launch moon",
+                 "land mars",
+                 "launch mars",
+                 "land earth"
+               ]
+
+      assert %Evaluation{warnings: []} = FuelCalculator.evaluate(updated)
+    end
+
+    test "doesn't insert steps past the step limit" do
+      params = params("1000", Enum.map_join(1..19, ", ", fn _n -> "land earth" end))
+
+      updated =
+        FuelCalculator.insert_steps_before(params, "step-5", steps("launch earth, land moon"))
+
+      assert updated == params
+    end
+
+    test "replaces a step with a warning's alternative, keeping the step's id" do
       params = params("28801", "launch earth, land moon, launch mars")
-      %Evaluation{warnings: [%PathWarning{suggestion: fix}]} = FuelCalculator.evaluate(params)
+      %Evaluation{warnings: [%PathWarning{replacement: fix}]} = FuelCalculator.evaluate(params)
 
       updated = FuelCalculator.replace_step(params, "step-2", fix)
 

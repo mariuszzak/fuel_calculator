@@ -13,9 +13,12 @@ defmodule FuelCalculator.Mission do
 
   @type t :: %__MODULE__{mass_kg: pos_integer(), steps: [FlightStep.t()]}
 
-  @doc "Builds a mission from an equipment mass in kilograms and its steps in flight order."
-  @spec new(pos_integer(), [FlightStep.t()]) :: t()
-  def new(mass_kg, steps) when is_integer(mass_kg) and mass_kg > 0 and is_list(steps) do
+  @doc """
+  Builds a mission from an equipment mass in kilograms and its steps in flight
+  order. Raises on invalid data: callers pass validated or trusted values only.
+  """
+  @spec new!(pos_integer(), [FlightStep.t()]) :: t()
+  def new!(mass_kg, steps) when is_integer(mass_kg) and mass_kg > 0 and is_list(steps) do
     if not Enum.all?(steps, &match?(%FlightStep{}, &1)) do
       raise ArgumentError, "every step must be a FuelCalculator.FlightStep"
     end

@@ -86,6 +86,14 @@ defmodule FuelCalculator do
   @spec replace_step(params(), String.t(), FlightStep.t()) :: params()
   defdelegate replace_step(params, step_id, step), to: ParamsEditor
 
+  @doc """
+  Inserts steps before the step with the given id, e.g. a warning's missing
+  steps. Unknown ids, or a path that would exceed the step limit, leave the
+  params unchanged.
+  """
+  @spec insert_steps_before(params(), String.t(), [FlightStep.t(), ...]) :: params()
+  defdelegate insert_steps_before(params, step_id, steps), to: ParamsEditor, as: :insert_before
+
   @doc "Moves the step with the given id one place up or down; edges are no-ops."
   @spec move_step(params(), String.t(), :up | :down) :: params()
   defdelegate move_step(params, step_id, direction), to: ParamsEditor

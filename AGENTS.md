@@ -152,7 +152,8 @@ Companion documents:
      framework design.
   3. **Forms** use `%Ecto.Changeset{}` via `to_form/1` as the framework
      expects. The context exposes a changeset only for form rendering
-     (`change_mission/1`); its validating API still returns error structs.
+     (`Evaluation.changeset` from `FuelCalculator.evaluate/1`); its validating
+     API still returns error structs.
 
 ### Validation of external input
 
