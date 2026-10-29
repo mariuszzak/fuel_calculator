@@ -46,7 +46,7 @@ defmodule FuelCalculatorWeb.Endpoint do
     socket "/phoenix/live_reload/socket", Phoenix.LiveReloader.Socket
     plug Phoenix.LiveReloader
     plug Phoenix.CodeReloader
-    plug :ignore_devtools_probe
+    plug FuelCalculatorWeb.Plugs.IgnoreDevtoolsProbe
   end
 
   plug Plug.RequestId
@@ -61,14 +61,4 @@ defmodule FuelCalculatorWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug FuelCalculatorWeb.Router
-
-  # Chrome DevTools asks every localhost page for this file (for its workspace
-  # feature). We don't offer it; answer with an empty 404 before the router so
-  # dev logs don't fill with NoRouteError traces. Dev only (code reloading).
-  @devtools_probe [".well-known", "appspecific", "com.chrome.devtools.json"]
-
-  defp ignore_devtools_probe(%Plug.Conn{path_info: @devtools_probe} = conn, _opts),
-    do: conn |> Plug.Conn.send_resp(404, "") |> Plug.Conn.halt()
-
-  defp ignore_devtools_probe(conn, _opts), do: conn
 end
