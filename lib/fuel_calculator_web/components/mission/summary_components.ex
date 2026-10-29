@@ -117,6 +117,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   attr :id, :string, required: true
   attr :count, :integer, required: true
   attr :target_id, :string, default: nil, doc: "the first flagged step, for the link"
+  attr :compact, :boolean, default: false, doc: "only the count on the narrowest phones"
 
   # Links to the first warning so it's one click away from the total.
   defp warning_badge(assigns) do
@@ -125,10 +126,13 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
       :if={@count > 0}
       id={@id}
       href={@target_id && "#warning-#{@target_id}"}
-      class="flex items-center gap-1.5 rounded-full border border-warn-border bg-warn-bg px-2.5 py-0.5 text-xs font-semibold text-warn-fg hover:underline"
+      class="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-warn-border bg-warn-bg px-2.5 py-0.5 text-xs font-semibold text-warn-fg hover:underline"
     >
       <.icon name="hero-exclamation-triangle-solid" class="size-3.5 text-warn-icon" />
-      {@count} path {if @count == 1, do: "warning", else: "warnings"}
+      {@count}
+      <span class={@compact && "max-[379px]:sr-only"}>
+        path {if @count == 1, do: "warning", else: "warnings"}
+      </span>
     </a>
     """
   end
@@ -143,12 +147,15 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   defp figure(assigns) do
     ~H"""
     <div class={[
-      "px-4 py-3 sm:px-6",
+      "px-3 py-3 sm:px-6",
       !@last_column && "border-r border-rule",
       !@bottom && "border-b border-rule"
     ]}>
       <div class="text-xs text-muted">{@label}</div>
-      <div class={["text-[15px]", if(@mono, do: "font-mono", else: "font-semibold")]}>
+      <div class={[
+        "text-[clamp(0.8125rem,4.4cqi,0.9375rem)]",
+        if(@mono, do: "font-mono", else: "font-semibold")
+      ]}>
         {if @inner_block != [], do: render_slot(@inner_block), else: @value || "—"}
       </div>
     </div>
@@ -175,17 +182,27 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
       aria-label="Mission total"
       class="fixed inset-x-3 bottom-3 z-20 mx-auto max-w-4xl rounded-box border border-rule bg-base-100/95 shadow-[var(--float-shadow)] backdrop-blur transition-transform duration-300 sm:translate-y-[calc(100%+1.5rem)] sm:data-pinned:translate-y-0"
     >
-      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
-        <span class="text-xs font-semibold uppercase tracking-wider text-muted">Total fuel</span>
-        <span :if={@report} class="fuel-mark font-mono text-2xl font-bold">
-          <.rolling_number id="pinned-total-fuel" value={@report.total_fuel_kg} /><span class="ml-1.5 text-sm font-normal text-muted">kg</span>
-        </span>
-        <span :if={!@report} class="font-mono text-2xl text-muted">—</span>
-        <.warning_badge
-          id="pinned-warning-count"
-          count={length(@evaluation.warnings)}
-          target_id={first_warning_step_id(@evaluation)}
-        />
+      <%!-- Phones: one row, the total (label and warnings above it) on the left
+           and the Add step button on the right. --%>
+      <div class="flex items-center gap-x-3 gap-y-2 px-4 py-2.5 sm:flex-wrap sm:gap-x-6 sm:px-5 sm:py-3">
+        <div class="flex shrink-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-6">
+          <span class="flex items-center gap-2">
+            <span class="text-xs font-semibold uppercase tracking-wider text-muted">Total fuel</span>
+            <.warning_badge
+              id="pinned-warning-count"
+              compact
+              count={length(@evaluation.warnings)}
+              target_id={first_warning_step_id(@evaluation)}
+            />
+          </span>
+          <span
+            :if={@report}
+            class="fuel-mark self-start font-mono text-[clamp(1rem,5vw,1.25rem)] font-bold sm:text-2xl"
+          >
+            <.rolling_number id="pinned-total-fuel" value={@report.total_fuel_kg} /><span class="ml-1.5 text-sm font-normal text-muted">kg</span>
+          </span>
+          <span :if={!@report} class="font-mono text-xl text-muted sm:text-2xl">—</span>
+        </div>
         <span :if={@report} class="hidden text-[13px] text-muted sm:inline">
           Wet mass
           <span class="font-mono text-base-content">
@@ -193,7 +210,11 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
           </span>
         </span>
         <span class="hidden text-[13px] text-muted sm:inline">{Format.route(@evaluation.steps)}</span>
-        <span :if={@full} id="pinned-step-limit" class="ml-auto text-xs text-muted sm:hidden">
+        <span
+          :if={@full}
+          id="pinned-step-limit"
+          class="ml-auto min-w-0 text-right text-xs text-muted sm:hidden"
+        >
           {@evaluation.step_limit} / {@evaluation.step_limit} steps
         </span>
         <button
@@ -202,9 +223,16 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
           phx-click="add_step"
           disabled={@full}
           aria-describedby={@full && "pinned-step-limit"}
-          class={["btn btn-primary btn-sm sm:hidden", !@full && "ml-auto"]}
+          aria-label={"Add step: " <> Format.step(@evaluation.next_step)}
+          class={[
+            "btn btn-primary btn-sm h-auto min-h-9 min-w-0 shrink whitespace-normal rounded-full px-4 py-1.5 text-left leading-tight sm:hidden",
+            !@full && "ml-auto"
+          ]}
         >
-          <.icon name="hero-plus" class="size-4" /> {Format.step(@evaluation.next_step)}
+          <.icon name="hero-plus" class="size-4" />
+          <%!-- The next step's name doesn't fit beside the total on the narrowest phones. --%>
+          <span class="whitespace-nowrap min-[380px]:hidden">Add step</span>
+          <span class="hidden min-[380px]:inline">{Format.step(@evaluation.next_step)}</span>
         </button>
       </div>
     </div>

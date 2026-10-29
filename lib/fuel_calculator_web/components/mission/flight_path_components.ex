@@ -167,7 +167,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     <li
       id={"step-#{@id}"}
       class={[
-        "motion-row-enter flex items-stretch gap-3 border-t border-rule sm:gap-4",
+        "motion-row-enter grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 border-t border-rule pb-4 sm:flex sm:items-stretch sm:gap-4 sm:pb-0",
         @selected && "rounded-field border-transparent bg-base-200/60"
       ]}
     >
@@ -180,25 +180,31 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         selected={@selected}
         warned={@warning != nil}
       />
-      <div class="flex min-w-0 flex-1 flex-col gap-2 py-4 sm:pr-1">
+      <%!-- Phones: the choices and fuel sit beside the step number and the details
+           below use the row's full width. Wider screens: one column beside the spine. --%>
+      <div class="contents sm:flex sm:min-w-0 sm:flex-1 sm:flex-col sm:gap-2 sm:py-4 sm:pr-1">
         <input type="hidden" name={@step[:id].name} value={@id} />
         <%!-- Phones: Launch/Land and the menu, then the body choice at full width,
              then the fuel. Wider screens: everything on one line. --%>
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-2.5">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-2.5 pt-4 sm:pt-0">
           <.maneuver_choice field={@step[:action]} index={@index} />
           <.body_choice field={@step[:planet]} index={@index} />
           <.step_fuel_amount id={@id} fuel={@fuel} max_fuel={@max_fuel} />
           <.step_buttons id={@id} index={@index} count={@count} />
           <.step_menu id={@id} index={@index} count={@count} />
         </div>
-        <.field_error
-          :for={{message, index} <- Enum.with_index(@errors)}
-          id={"step-#{@id}-error-#{index}"}
-          message={message}
-        />
-        <.mass_at_burn :if={@fuel} id={@id} fuel={@fuel} index={@index} count={@count} />
-        <.path_warning :if={@warning} warning={@warning} step_id={@id} room={@limit - @count} />
-        <.fuel_chain :if={@selected && @fuel} fuel={@fuel} />
+        <div class="col-span-2 flex flex-col gap-2 has-[*]:pt-2 sm:contents">
+          <.field_error
+            :for={{message, index} <- Enum.with_index(@errors)}
+            id={"step-#{@id}-error-#{index}"}
+            message={message}
+          /><.mass_at_burn :if={@fuel} id={@id} fuel={@fuel} index={@index} count={@count} /><.path_warning
+            :if={@warning}
+            warning={@warning}
+            step_id={@id}
+            room={@limit - @count}
+          /><.fuel_chain :if={@selected && @fuel} fuel={@fuel} />
+        </div>
       </div>
     </li>
     """
@@ -294,8 +300,8 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       <label
         :for={{value, label, planet} <- @options}
         class={[
-          "flex min-h-9 items-center justify-center gap-1.5 rounded-full px-3 text-sm font-medium text-muted transition-colors hover:text-base-content sm:min-h-8 sm:px-3.5",
-          @stretch && "flex-1 sm:flex-none",
+          "flex min-h-9 items-center justify-center rounded-full text-sm font-medium text-muted transition-colors hover:text-base-content sm:min-h-8 sm:gap-1.5 sm:px-3.5",
+          if(@stretch, do: "min-w-0 flex-1 gap-1 px-1.5 sm:flex-none", else: "gap-1.5 px-3"),
           "has-checked:bg-base-100 has-checked:text-base-content has-checked:shadow-sm",
           "has-focus-visible:outline-2 has-focus-visible:outline-offset-1 has-focus-visible:outline-base-content"
         ]}
@@ -385,25 +391,25 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     ~H"""
     <details class="dropdown dropdown-end order-2 ml-auto sm:hidden">
       <summary
-        class="btn btn-ghost btn-square btn-sm"
+        class="btn btn-ghost btn-circle btn-sm text-muted"
         aria-label={"More actions for step #{@index + 1}"}
       >
         <.icon name="hero-ellipsis-vertical" class="size-5" />
       </summary>
-      <ul class="menu dropdown-content z-10 w-48 rounded-box border border-neutral bg-base-100 p-1">
+      <ul class="menu dropdown-content z-10 mt-1 w-48 gap-0.5 rounded-box border border-rule bg-base-100 p-1.5 text-sm shadow-[var(--float-shadow)]">
         <li :if={@index > 0}>
           <button type="button" phx-click="move_step" phx-value-id={@id} phx-value-direction="up">
-            Move up
+            <.icon name="hero-arrow-up" class="size-4 text-muted" /> Move up
           </button>
         </li>
         <li :if={@index < @count - 1}>
           <button type="button" phx-click="move_step" phx-value-id={@id} phx-value-direction="down">
-            Move down
+            <.icon name="hero-arrow-down" class="size-4 text-muted" /> Move down
           </button>
         </li>
         <li>
           <button type="button" phx-click="remove_step" phx-value-id={@id} class="text-error">
-            Remove
+            <.icon name="hero-x-mark" class="size-4" /> Remove step
           </button>
         </li>
       </ul>

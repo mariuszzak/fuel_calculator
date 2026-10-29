@@ -42,7 +42,7 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
           phx-debounce={@debounce_ms}
           aria-invalid={to_string(@error != nil)}
           aria-describedby={@error && "mass-error"}
-          class="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 font-mono text-[22px] outline-none"
+          class="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 font-mono text-[clamp(1.125rem,5.6vw,1.375rem)] outline-none"
         />
         <span class="flex items-center px-4 font-mono text-muted">kg</span>
       </div>

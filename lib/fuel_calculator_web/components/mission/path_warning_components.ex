@@ -67,7 +67,10 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
       phx-value-id={@step_id}
       disabled={@disabled}
       aria-describedby={@describedby}
-      class={["btn btn-sm h-auto min-h-8 whitespace-normal rounded-full py-1.5 text-left", @class]}
+      class={[
+        "btn btn-sm h-auto min-h-8 max-w-full whitespace-normal rounded-full py-1.5 text-left",
+        @class
+      ]}
     >
       {render_slot(@inner_block)}
     </button>

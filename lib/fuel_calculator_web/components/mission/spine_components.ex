@@ -151,7 +151,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
           delay_ms={position * @chain_stagger_ms}
         />
       </ol>
-      <p class="grid grid-cols-[6.5rem_minmax(0,1fr)_4.5rem] sm:grid-cols-[9rem_minmax(0,1fr)_6rem] gap-2.5 border-t border-rule pt-1 text-xs">
+      <p class="grid grid-cols-[minmax(0,1fr)_2rem_5rem] sm:grid-cols-[9rem_minmax(0,1fr)_6rem] gap-2 sm:gap-2.5 border-t border-rule pt-1 text-xs">
         <span class="text-muted">step total</span>
         <span></span>
         <span class="text-right font-mono font-bold">{Format.number(@fuel.fuel_kg)}</span>
@@ -167,7 +167,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
 
   defp chain_link(assigns) do
     ~H"""
-    <li class="grid grid-cols-[6.5rem_minmax(0,1fr)_4.5rem] sm:grid-cols-[9rem_minmax(0,1fr)_6rem] items-center gap-2.5 text-xs">
+    <li class="grid grid-cols-[minmax(0,1fr)_2rem_5rem] sm:grid-cols-[9rem_minmax(0,1fr)_6rem] items-center gap-2 sm:gap-2.5 text-xs">
       <span class="text-muted">{@label}</span>
       <span class="block h-2 overflow-hidden rounded-full bg-base-300" aria-hidden="true">
         <span
