@@ -127,14 +127,17 @@ defmodule FuelCalculatorWeb.MissionLive do
 
   def handle_event("move_step", %{"id" => id, "direction" => direction}, socket)
       when is_binary(id) do
-    case direction(direction) do
-      {:ok, direction} ->
+    case {direction(direction), id in socket.assigns.evaluation.step_ids} do
+      {{:ok, direction}, true} ->
         {:noreply,
          socket
          |> edit(&FuelCalculator.move_step(&1, id, direction))
          |> focus_moved_step(id, direction)}
 
-      :error ->
+      {{:ok, _direction}, false} ->
+        {:noreply, socket}
+
+      {:error, _known_step} ->
         {:noreply, socket}
     end
   end

@@ -405,17 +405,35 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       </summary>
       <ul class="menu dropdown-content z-10 mt-1 w-48 gap-0.5 rounded-box border border-rule bg-base-100 p-1.5 text-sm shadow-[var(--float-shadow)] [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-base-content">
         <li :if={@index > 0}>
-          <button type="button" phx-click="move_step" phx-value-id={@id} phx-value-direction="up">
+          <button
+            type="button"
+            id={"menu-move-up-#{@id}"}
+            phx-click="move_step"
+            phx-value-id={@id}
+            phx-value-direction="up"
+          >
             <.icon name="hero-arrow-up" class="size-4 text-muted" /> Move up
           </button>
         </li>
         <li :if={@index < @count - 1}>
-          <button type="button" phx-click="move_step" phx-value-id={@id} phx-value-direction="down">
+          <button
+            type="button"
+            id={"menu-move-down-#{@id}"}
+            phx-click="move_step"
+            phx-value-id={@id}
+            phx-value-direction="down"
+          >
             <.icon name="hero-arrow-down" class="size-4 text-muted" /> Move down
           </button>
         </li>
         <li>
-          <button type="button" phx-click="remove_step" phx-value-id={@id} class="text-error">
+          <button
+            type="button"
+            id={"menu-remove-#{@id}"}
+            phx-click="remove_step"
+            phx-value-id={@id}
+            class="text-error"
+          >
             <.icon name="hero-x-mark" class="size-4" /> Remove step
           </button>
         </li>

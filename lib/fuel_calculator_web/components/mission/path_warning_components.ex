@@ -62,6 +62,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
     ~H"""
     <button
       type="button"
+      id={"#{String.replace(@event, "_", "-")}-#{@step_id}"}
       phx-click={@event}
       phx-value-id={@step_id}
       aria-disabled={@aria_disabled && "true"}
