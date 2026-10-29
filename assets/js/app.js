@@ -81,3 +81,8 @@ if (process.env.NODE_ENV === "development") {
   })
 }
 
+// Lets the server move keyboard focus after an edit (e.g. to the moved step's
+// button or the undo button), since the focused element may have moved or gone.
+window.addEventListener("phx:focus", (event) => {
+  document.getElementById(event.detail.id)?.focus()
+})

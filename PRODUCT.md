@@ -51,13 +51,15 @@ for the three missions).
 
 ## Input and validation
 
-- **Mass is whole kilograms, digits only, from 1 to 1,000,000,000 kg.** All
-  spec examples are whole kilograms, so we keep the input simple and exact.
-  Surrounding spaces are ignored; signs, decimals, exponents ("1e5"),
-  separators and units are rejected with a message that says what to type,
-  e.g. "Use whole kilograms, digits only, for example 28801." The upper limit
-  covers any real spacecraft (a Saturn V is about 2.9 million kg) and bounds
-  untrusted input.
+- **Mass is whole kilograms, from 1 to 1,000,000,000 kg.** All spec examples
+  are whole kilograms, so we keep the input simple and exact. Digits may be
+  grouped in threes with commas, and the field shows them that way once you
+  leave it ("28801" becomes "28,801"), because large masses are hard to read
+  without separators. Surrounding spaces are ignored; signs, decimals,
+  exponents ("1e5"), badly grouped separators ("28,80,1") and units are
+  rejected with a message that says what to type, e.g. "Use whole kilograms,
+  for example 28801 or 28,801." The upper limit covers any real spacecraft (a
+  Saturn V is about 2.9 million kg) and bounds untrusted input.
 - **The mass field is plain text with a numeric keypad**, not a number input.
   Browsers send an empty value for half-typed numbers in number inputs, which
   would hide what the user typed from validation.
@@ -138,7 +140,7 @@ Decided in detail in [`DESIGN.md`](DESIGN.md). In short:
 - **Light and dark themes that mirror each other**, so switching feels like
   dimming the same product. Every colour pair meets WCAG AA.
 - **Errors and warnings look and behave differently.** Errors are red with an
-  x-circle and block the total; warnings are a dashed outline with a triangle,
+  x-circle and block the total; warnings are amber with a triangle,
   keep the total and offer a fix.
 - **Motion only explains change** (the total rolling to its new value, rows
   sliding in, arcs drawing on) and switches off for users who turn motion

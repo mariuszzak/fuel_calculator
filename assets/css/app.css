@@ -41,8 +41,8 @@
   --color-info-content: #F6F8FB;
   --color-success: #14805A;
   --color-success-content: #F6F8FB;
-  --color-warning: #4A5767;
-  --color-warning-content: #F6F8FB;
+  --color-warning: #B7791F;
+  --color-warning-content: #161C24;
   --color-error: #B42318;
   --color-error-content: #F6F8FB;
   --radius-selector: 0.375rem;
@@ -76,7 +76,7 @@
   --color-info-content: #161C24;
   --color-success: #4FCF97;
   --color-success-content: #121416;
-  --color-warning: #A1AEBE;
+  --color-warning: #C58F2E;
   --color-warning-content: #161C24;
   --color-error: #FF8A8A;
   --color-error-content: #161C24;
@@ -102,6 +102,10 @@
   --planet-earth: #2C6DB5;
   --planet-moon: #717C89;
   --planet-mars: #B5622B;
+  --warn-fg: #7A4600;
+  --warn-bg: #FDF0D5;
+  --warn-border: #B7791F;
+  --warn-icon: #9A5B00;
 }
 
 [data-theme=dark] {
@@ -115,6 +119,10 @@
   --planet-earth: #5A9FE8;
   --planet-moon: #B4BFCC;
   --planet-mars: #DE8A4E;
+  --warn-fg: #F6C76E;
+  --warn-bg: #33291A;
+  --warn-border: #C58F2E;
+  --warn-icon: #F2B544;
 }
 
 @font-face {
@@ -145,6 +153,10 @@
   --color-planet-earth: var(--planet-earth);
   --color-planet-moon: var(--planet-moon);
   --color-planet-mars: var(--planet-mars);
+  --color-warn-fg: var(--warn-fg);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-border: var(--warn-border);
+  --color-warn-icon: var(--warn-icon);
 }
 
 /* Add variants based on LiveView classes */
@@ -160,6 +172,37 @@
 
 /* This file is for your main application CSS */
 
+/* Tailwind v4 gives buttons the default cursor. Clickable things show a
+   pointer, disabled ones show that they can't be used. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label:has(> input[type="radio"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
+/* daisyUI turns pointer events off on disabled buttons, which hides the
+   not-allowed cursor. Turn them back on for the cursor only (the disabled
+   attribute still blocks clicks) and keep disabled ghost buttons flat on hover. */
+.btn:disabled,
+.btn[disabled] {
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
+.btn-ghost:disabled:hover,
+.btn-ghost[disabled]:hover {
+  background-color: transparent;
+  border-color: transparent;
+}
+
 /* Numbers line up and zeros are unambiguous wherever the mono face is used. */
 .font-mono { font-variant-numeric: tabular-nums slashed-zero; }
 
@@ -168,3 +211,44 @@
   background: linear-gradient(transparent 58%, var(--fuel-mark) 58%, var(--fuel-mark) 92%, transparent 92%);
 }
 
+
+/* Motion (DESIGN.md): animations only explain change. Enter animations play
+   once, when LiveView inserts the element; rows keep stable ids, so edits to an
+   existing row don't replay them. */
+/* New rows slide in and flash briefly so it's clear what was added. */
+@keyframes motion-slide-in {
+  0% { opacity: 0; transform: translateY(-6px); background-color: var(--color-base-300); }
+  50% { opacity: 1; transform: none; background-color: var(--color-base-300); }
+}
+
+@keyframes motion-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+}
+
+@keyframes motion-pop {
+  from { transform: scale(0); }
+}
+
+@keyframes motion-grow {
+  from { transform: scaleX(0); }
+}
+
+@keyframes motion-toast-in {
+  from { opacity: 0; transform: translateY(12px); }
+}
+
+.motion-row-enter { animation: motion-slide-in 900ms cubic-bezier(.2, .8, .2, 1) both; }
+.motion-arc-enter { animation: motion-fade-in 420ms cubic-bezier(.6, 0, .2, 1) both; }
+.motion-pop { animation: motion-pop 220ms 300ms cubic-bezier(.2, .8, .2, 1) both; }
+.motion-fade { animation: motion-fade-in 180ms ease-out both; }
+.motion-toast { animation: motion-toast-in 220ms cubic-bezier(.2, .8, .2, 1) both; }
+.motion-grow { transform-origin: left; animation: motion-grow 420ms cubic-bezier(.2, .8, .2, 1) both; }
+.motion-bar { transform-origin: left; transition: transform 320ms cubic-bezier(.2, .8, .2, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

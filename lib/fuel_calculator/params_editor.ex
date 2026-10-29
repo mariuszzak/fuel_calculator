@@ -15,10 +15,28 @@ defmodule FuelCalculator.ParamsEditor do
 
   @type params :: %{optional(String.t()) => term()}
 
-  @spec from_preset(Preset.t()) :: params()
-  def from_preset(%Preset{mission: %Mission{mass_kg: mass_kg, steps: steps}}) do
-    %{"mass" => Integer.to_string(mass_kg), "steps" => Enum.map(steps, &step_params/1)}
+  # Reuses the current steps' ids by position, so loading a preset updates the
+  # rows already on screen instead of replacing all of them.
+  @spec from_preset(Preset.t(), params()) :: params()
+  def from_preset(%Preset{mission: %Mission{mass_kg: mass_kg, steps: steps}}, current)
+      when is_map(current) do
+    current_ids = current |> steps() |> Enum.map(&step_id/1)
+
+    preset_steps =
+      steps
+      |> Enum.with_index()
+      |> Enum.map(fn {%FlightStep{} = step, index} ->
+        reuse_id(step_params(step), Enum.at(current_ids, index))
+      end)
+
+    %{"mass" => Integer.to_string(mass_kg), "steps" => preset_steps}
   end
+
+  defp step_id(%{"id" => id}) when is_binary(id), do: id
+  defp step_id(_step_without_a_usable_id), do: nil
+
+  defp reuse_id(step, id) when is_binary(id), do: %{step | "id" => id}
+  defp reuse_id(step, nil), do: step
 
   @spec add_step(params(), FlightStep.t()) :: params()
   def add_step(params, %FlightStep{} = step) when is_map(params) do

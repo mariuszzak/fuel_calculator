@@ -10,6 +10,9 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
   alias FuelCalculatorWeb.Format
   alias FuelCalculatorWeb.Mission.Spine
 
+  # Chain bars grow one after another so the eye follows the shrinking fuel.
+  @chain_stagger_ms 40
+
   @doc """
   The spine beside one step: surface and orbit rails, the step's arc and its
   burn ring with a planet dot. Decorative; the row is the accessible content.
@@ -50,17 +53,20 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
           :if={@warned}
           d="M178 0 C138 6, 52 3, 22 15"
           fill="none"
-          class="stroke-base-content"
-          stroke-width="1.6"
-          stroke-dasharray="3 4"
+          class="stroke-warn-border"
+          stroke-width="2"
+          stroke-dasharray="4 4"
           vector-effect="non-scaling-stroke"
         />
         <path
           :if={@arc}
           d={@arc.path}
           fill="none"
-          class={if @selected, do: "stroke-[var(--fuel-arc-selected)]", else: "stroke-[var(--spine)]"}
-          stroke-width={@arc.stroke_width}
+          class={[
+            "motion-arc-enter transition-[stroke-width,stroke] duration-300",
+            if(@selected, do: "stroke-[var(--fuel-arc-selected)]", else: "stroke-[var(--spine)]")
+          ]}
+          style={"stroke-width: #{@arc.stroke_width}px"}
           stroke-linecap="round"
           vector-effect="non-scaling-stroke"
         />
@@ -85,12 +91,16 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
       <span
         :if={@arc.ring_size > 0}
         class={[
-          "absolute rounded-full border-2 border-accent",
-          if(@selected, do: "bg-accent/40", else: "bg-accent/15")
+          "motion-pop absolute rounded-full border-2 border-accent ring-2 ring-base-200",
+          "transition-[width,height,background-color] duration-300",
+          if(@selected, do: "bg-accent/70", else: "bg-accent/35")
         ]}
         style={"width: #{@arc.ring_size}px; height: #{@arc.ring_size}px"}
       ></span>
-      <span class={["relative size-2.5 rounded-full border-2 border-base-200", planet_dot(@planet)]}></span>
+      <span class={[
+        "relative size-3 rounded-full border-2 border-base-100 ring-1 ring-base-content/20",
+        planet_dot(@planet)
+      ]}></span>
     </span>
     """
   end
@@ -106,8 +116,8 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
     ~H"""
     <span class="block h-[3px] w-36 overflow-hidden rounded-full bg-base-300" aria-hidden="true">
       <span
-        class="block h-full rounded-full bg-accent"
-        style={"width: #{Float.round(@share * 100, 1)}%"}
+        class="motion-bar block h-full rounded-full bg-accent"
+        style={"transform: scaleX(#{Float.round(@share, 3)})"}
       ></span>
     </span>
     """
@@ -120,6 +130,8 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
   attr :fuel, StepFuel, required: true
 
   def fuel_chain(assigns) do
+    assigns = assign(assigns, :chain_stagger_ms, @chain_stagger_ms)
+
     ~H"""
     <div id="fuel-chain" class="flex flex-col gap-1 border-t border-dashed border-rule pt-2.5">
       <h3 class="text-xs font-semibold uppercase tracking-wider text-muted">
@@ -134,6 +146,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
           label={chain_label(position, @fuel)}
           link_kg={link_kg}
           share={link_kg / hd(@fuel.chain_kg)}
+          delay_ms={position * @chain_stagger_ms}
         />
       </ol>
       <p class="grid grid-cols-[9rem_minmax(0,1fr)_6rem] gap-2.5 border-t border-rule pt-1 text-xs">
@@ -148,6 +161,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
   attr :label, :string, required: true
   attr :link_kg, :integer, required: true
   attr :share, :float, required: true
+  attr :delay_ms, :integer, required: true
 
   defp chain_link(assigns) do
     ~H"""
@@ -155,8 +169,8 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
       <span class="text-muted">{@label}</span>
       <span class="block h-2 overflow-hidden rounded-sm bg-base-300" aria-hidden="true">
         <span
-          class="block h-full min-w-0.5 bg-accent"
-          style={"width: #{Float.round(@share * 100, 1)}%"}
+          class="motion-grow block h-full min-w-0.5 bg-accent"
+          style={"width: #{Float.round(@share * 100, 1)}%; animation-delay: #{@delay_ms}ms"}
         ></span>
       </span>
       <span class="text-right font-mono">{Format.number(@link_kg)}</span>

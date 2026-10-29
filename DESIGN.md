@@ -9,7 +9,8 @@ looks, moves and reads.
 
 1. **Colour means data.** The UI chrome is neutral slate. One colour, mint,
    means fuel and nothing else. Planets have their own dot colours. Status
-   colour appears only when something is wrong.
+   colour appears only when something needs attention: amber for path
+   warnings, red for errors.
 2. **Numbers stay ink.** Fuel figures are never coloured text. The fuel colour
    appears as marks around them: the highlighter band under the total, bars,
    burn rings, the selected arc.
@@ -45,6 +46,10 @@ dark.
 | Selected step number | `#96E2BF` fill, `#161C24` border | `#4FCF97` fill and border | number text `#121416` |
 | Spine | `#7A8697` | `#768699` | arcs of unselected steps |
 | Error | `#B42318` | `#FF8A8A` | error text, x-circle, invalid input border |
+| Warning text | `#7A4600` | `#F6C76E` | path warning text (6.9 / 9.0 on its background) |
+| Warning background | `#FDF0D5` | `#33291A` | path warning box, warned step number, warning badge |
+| Warning border | `#B7791F` | `#C58F2E` | warning outlines, the spine's jump line |
+| Warning icon | `#9A5B00` | `#F2B544` | the warning triangle |
 | Earth | `#2C6DB5` | `#5A9FE8` | planet dot |
 | Moon | `#717C89` | `#B4BFCC` | planet dot |
 | Mars | `#B5622B` | `#DE8A4E` | planet dot |
@@ -113,8 +118,10 @@ next to the theme blocks: `--fuel-mark`, `--fuel-arc-selected`, `--muted`,
 - `accent` is the fuel colour. Never use it for anything that isn't fuel.
 - `success` shares the mint. Use it only for confirmations, and always with
   an icon and text, so mint keeps meaning fuel.
-- `warning` is deliberately hue-less: warnings are a dashed `neutral` outline
-  with a triangle, never a coloured fill.
+- `warning` is amber. Path warnings must be noticed without blocking
+  anything, so they get a tinted box, a solid triangle and a link from the
+  summary. (They started hue-less while amber still meant fuel; once fuel
+  became mint, the grey dashed box proved too easy to miss.)
 
 ## Typography
 
@@ -171,7 +178,7 @@ except the toast. Separate rows with rules rather than nested cards.
 | State | Treatment |
 |---|---|
 | Validation error | Red border on the field, x-circle + message below it (`aria-describedby`). The total shows `—` with the reason. Shown after the debounce or on blur, never on the first keystroke |
-| Path warning | Dashed neutral outline, triangle, "Check path." + explanation, and two fix buttons: add the missing steps before this one (primary, e.g. "Add Launch from Moon before") and change this step (secondary, e.g. "Change to Launch from Moon"). The total stays |
+| Path warning | Amber box with a solid triangle, "Check path." + explanation, and two fix buttons: add the missing steps before this one (primary, e.g. "Add Launch from Moon before") and change this step (secondary, e.g. "Change to Launch from Moon"). The step number and the spine's jump line turn amber, and the summary and pinned bar show a badge linking to the first warning. The total stays |
 | Zero-fuel step | `0 kg` with the arithmetic shown, e.g. `100 × 1.62 × 0.033 − 42 = −36.65` |
 | Empty path | "No steps yet" with the three presets; total `—` |
 | Step limit | Add step disabled with "A flight path holds up to 20 steps." in neutral styling |
@@ -183,13 +190,13 @@ except the toast. Separate rows with rules rather than nested cards.
 | Animation | Trigger | Spec |
 |---|---|---|
 | Total rolls to the new value | total changes | 450 ms ease-out; a small colocated hook; retargets if interrupted; a separate hidden live region announces the final value |
-| Total ↔ `—` | validation error appears or clears | 160 ms crossfade |
-| Row enters | add step, preset | 320 ms slide and fade; preset rows staggered 30 ms |
-| Row exits | remove | 160 ms fade (`phx-remove`), then the undo toast |
-| Arc draws on | new or changed step | 420 ms `stroke-dashoffset`; burn ring pops after 300 ms |
+| Total ↔ `—` | validation error appears or clears | 180 ms fade in |
+| Row enters | add step, a preset with more steps | 320 ms slide and fade. Loading a preset reuses the rows on screen (ids by position), so they update in place instead of re-entering |
+| Row exits | remove | Removed instantly; the undo toast confirms. An exit fade kept the row in the list for a moment and made the list jump |
+| Arc enters | new step | 420 ms fade in; burn ring pops after 300 ms. (A `stroke-dashoffset` draw-on doesn't combine reliably with the non-scaling strokes the stretched spine needs) |
 | Fuel bars | any recalculation | `transform: scaleX` transition, 320 ms (never animate `width`) |
 | Chain bars | select a step | grow left to right, 40 ms stagger |
-| Validation message | error shown | height reveal, 160 ms; no shake |
+| Validation message | error shown | 180 ms fade in; no shake |
 
 Easing: `cubic-bezier(.2,.8,.2,1)` for entering, `cubic-bezier(.6,0,.2,1)` for
 drawing. Step rows need stable DOM ids (from step ids, never the index) so

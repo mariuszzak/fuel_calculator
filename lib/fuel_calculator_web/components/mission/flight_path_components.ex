@@ -6,6 +6,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
 
   use FuelCalculatorWeb, :html
 
+  import FuelCalculatorWeb.Mission.NumberComponents
   import FuelCalculatorWeb.Mission.PathWarningComponents
   import FuelCalculatorWeb.Mission.SpineComponents
 
@@ -37,6 +38,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
           <.step_row
             step={step}
             count={@count}
+            limit={@evaluation.step_limit}
             fuel={step_fuel(@evaluation, step.index)}
             warning={step_warning(@evaluation, step.index)}
             arc={@arcs && Enum.at(@arcs, step.index)}
@@ -75,23 +77,37 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
 
   defp path_header(assigns) do
     ~H"""
-    <div class="flex flex-wrap items-baseline gap-3 pb-2.5">
-      <h2
-        id="flight-path-heading"
-        class="text-[13px] font-semibold uppercase tracking-wider text-muted"
+    <div class="flex items-end gap-4 pb-2.5">
+      <%!-- Lines up with the step number column and the spine's two rails. --%>
+      <div class="w-11 shrink-0"></div>
+      <div
+        id="spine-rails"
+        aria-hidden="true"
+        class="relative hidden h-4 w-[200px] shrink-0 text-[11px] font-semibold uppercase tracking-wider text-muted sm:block"
       >
-        Flight path
-      </h2>
-      <span class="text-[13px] text-muted">steps run top to bottom</span>
-      <button
-        :if={@has_steps}
-        type="button"
-        id="clear-path"
-        phx-click="clear_path"
-        class="ml-auto text-[13px] text-muted underline underline-offset-4"
-      >
-        Clear path
-      </button>
+        <span class="absolute left-[22px] -translate-x-1/2">Surface</span>
+        <span class="absolute left-[178px] -translate-x-1/2">Orbit</span>
+      </div>
+      <div class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2
+          id="flight-path-heading"
+          class="text-[13px] font-semibold uppercase tracking-wider text-muted"
+        >
+          Flight path
+        </h2>
+        <span class="text-[13px] text-muted">
+          steps run top to bottom · select a step number to see its fuel chain
+        </span>
+        <button
+          :if={@has_steps}
+          type="button"
+          id="clear-path"
+          phx-click="clear_path"
+          class="ml-auto text-[13px] text-muted underline underline-offset-4"
+        >
+          Clear path
+        </button>
+      </div>
     </div>
     """
   end
@@ -107,6 +123,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
 
   attr :step, Phoenix.HTML.Form, required: true, doc: "the step's nested form"
   attr :count, :integer, required: true
+  attr :limit, :integer, required: true
   attr :fuel, StepFuel, default: nil
   attr :warning, PathWarning, default: nil
   attr :arc, Spine, default: nil
@@ -119,10 +136,13 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     ~H"""
     <li
       id={"step-#{@id}"}
-      class={["flex items-stretch gap-4 border-t border-rule", @selected && "bg-base-100"]}
+      class={[
+        "motion-row-enter flex items-stretch gap-4 border-t border-rule",
+        @selected && "bg-base-100"
+      ]}
     >
       <div class="shrink-0 pl-1 pt-4">
-        <.step_number id={@id} index={@index} selected={@selected} />
+        <.step_number id={@id} index={@index} selected={@selected} warned={@warning != nil} />
       </div>
       <.spine_column
         arc={@arc}
@@ -135,12 +155,12 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         <div class="flex flex-wrap items-center gap-3">
           <.maneuver_choice field={@step[:action]} index={@index} />
           <.body_choice field={@step[:planet]} index={@index} />
-          <.step_fuel_amount fuel={@fuel} max_fuel={@max_fuel} />
+          <.step_fuel_amount id={@id} fuel={@fuel} max_fuel={@max_fuel} />
           <.step_buttons id={@id} index={@index} count={@count} />
           <.step_menu id={@id} index={@index} count={@count} />
         </div>
-        <.mass_at_burn :if={@fuel} fuel={@fuel} index={@index} count={@count} />
-        <.path_warning :if={@warning} warning={@warning} step_id={@id} />
+        <.mass_at_burn :if={@fuel} id={@id} fuel={@fuel} index={@index} count={@count} />
+        <.path_warning :if={@warning} warning={@warning} step_id={@id} room={@limit - @count} />
         <.fuel_chain :if={@selected && @fuel} fuel={@fuel} />
       </div>
     </li>
@@ -154,6 +174,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   attr :id, :string, required: true
   attr :index, :integer, required: true
   attr :selected, :boolean, required: true
+  attr :warned, :boolean, default: false
 
   defp step_number(assigns) do
     ~H"""
@@ -166,12 +187,18 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         "flex size-10 items-center justify-center rounded-full border font-mono text-xs font-semibold",
         if(@selected,
           do: "border-base-content bg-[var(--step-number-selected)] text-[#121416]",
-          else: "border-neutral text-muted hover:border-base-content"
+          else:
+            if(@warned,
+              do: "border-2 border-warn-border bg-warn-bg text-warn-fg",
+              else: "border-neutral text-muted hover:border-base-content"
+            )
         )
       ]}
     >
       {Format.step_number(@index)}
-      <span class="sr-only">: show the fuel chain for step {@index + 1}</span>
+      <span class="sr-only">
+        : show the fuel chain for step {@index + 1}{if @warned, do: " (has a path warning)"}
+      </span>
     </button>
     """
   end
@@ -247,6 +274,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   defp planet_dot(:moon), do: "bg-planet-moon"
   defp planet_dot(:mars), do: "bg-planet-mars"
 
+  attr :id, :string, required: true
   attr :fuel, StepFuel, default: nil
   attr :max_fuel, :integer, required: true
 
@@ -254,7 +282,9 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     ~H"""
     <span class="ml-auto flex min-w-36 flex-col items-end gap-1.5">
       <span class="font-mono text-lg font-bold leading-tight">
-        {if @fuel, do: Format.number(@fuel.fuel_kg), else: "—"}<span class="ml-1.5 text-xs font-normal text-muted">kg</span>
+        <.rolling_number :if={@fuel} id={"step-fuel-#{@id}"} value={@fuel.fuel_kg} /><span :if={
+          !@fuel
+        }>—</span><span class="ml-1.5 text-xs font-normal text-muted">kg</span>
       </span>
       <.fuel_bar :if={@fuel} share={@fuel.fuel_kg / @max_fuel} />
     </span>
@@ -272,6 +302,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         icon="hero-arrow-up"
         event="move_step"
         id={@id}
+        button_id={"move-up-#{@id}"}
         direction="up"
         disabled={@index == 0}
       >
@@ -281,12 +312,19 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         icon="hero-arrow-down"
         event="move_step"
         id={@id}
+        button_id={"move-down-#{@id}"}
         direction="down"
         disabled={@index == @count - 1}
       >
         Move step {@index + 1} down
       </.step_button>
-      <.step_button icon="hero-x-mark" event="remove_step" id={@id} class="hover:text-error">
+      <.step_button
+        icon="hero-x-mark"
+        event="remove_step"
+        id={@id}
+        button_id={"remove-#{@id}"}
+        class="hover:text-error"
+      >
         Remove step {@index + 1}
       </.step_button>
     </div>
@@ -332,6 +370,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   attr :icon, :string, required: true
   attr :event, :string, required: true
   attr :id, :string, required: true
+  attr :button_id, :string, required: true
   attr :direction, :string, default: nil
   attr :disabled, :boolean, default: false
   attr :class, :string, default: nil
@@ -341,6 +380,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     ~H"""
     <button
       type="button"
+      id={@button_id}
       phx-click={@event}
       phx-value-id={@id}
       phx-value-direction={@direction}
@@ -353,6 +393,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     """
   end
 
+  attr :id, :string, required: true
   attr :fuel, StepFuel, required: true
   attr :index, :integer, required: true
   attr :count, :integer, required: true
@@ -360,7 +401,10 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   defp mass_at_burn(assigns) do
     ~H"""
     <p class="text-[13px] text-muted">
-      Mass at burn <span class="font-mono text-base-content">{Format.kg(@fuel.carried_mass_kg)}</span>
+      Mass at burn
+      <span class="font-mono text-base-content">
+        <.rolling_number id={"mass-at-burn-#{@id}"} value={@fuel.carried_mass_kg} /> kg
+      </span>
       · {carries(@index, @count)}
     </p>
     """

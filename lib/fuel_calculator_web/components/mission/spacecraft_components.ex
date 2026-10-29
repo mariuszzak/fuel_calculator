@@ -6,6 +6,7 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
   use FuelCalculatorWeb, :html
 
   alias FuelCalculator.Preset
+  alias FuelCalculatorWeb.Format
 
   # Wait for a pause in typing so "28801" doesn't recalculate five times.
   @mass_debounce_ms 250
@@ -21,15 +22,19 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
       <label for={@field.id} class="text-[15px] font-medium">
         Equipment mass <span class="font-normal text-muted">· dry, without fuel</span>
       </label>
-      <div class={[
-        "flex max-w-sm items-stretch rounded-field border bg-base-100",
-        if(@error, do: "border-error", else: "border-neutral")
-      ]}>
+      <div
+        id="mass-field"
+        class={[
+          "flex max-w-sm items-stretch rounded-field border bg-base-100",
+          if(@error, do: "border-error", else: "border-neutral")
+        ]}
+      >
         <input
           type="text"
           id={@field.id}
           name={@field.name}
-          value={@field.value}
+          value={display_mass(@field.value)}
+          phx-hook=".MassInput"
           inputmode="numeric"
           autocomplete="off"
           phx-debounce={@debounce_ms}
@@ -41,8 +46,58 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
       </div>
       <.field_error :if={@error} id="mass-error" message={@error} />
     </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".MassInput">
+      // Groups the digits with commas as the user types ("28801" -> "28,801"),
+      // keeping the caret after the same digit. Anything that isn't digits and
+      // commas is left as typed so the validation message can explain it.
+      const group = (digits) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+      const groupable = (value) => /^[\d,]*$/.test(value)
+
+      export default {
+        mounted() {
+          this.el.addEventListener("input", () => this.format())
+          this.el.addEventListener("keydown", (event) => this.skipSeparator(event))
+        },
+        // Backspace/Delete next to a comma removes the neighbouring digit instead
+        // of the comma, which would just be put back.
+        skipSeparator(event) {
+          const {value, selectionStart: start, selectionEnd: end} = this.el
+          if (start !== end) return
+          if (event.key === "Backspace" && value[start - 1] === ",") {
+            this.el.setSelectionRange(start - 1, start - 1)
+          } else if (event.key === "Delete" && value[start] === ",") {
+            this.el.setSelectionRange(start + 1, start + 1)
+          }
+        },
+        format() {
+          const {value, selectionStart} = this.el
+          if (!groupable(value)) return
+
+          const digitsBeforeCaret = value.slice(0, selectionStart).replace(/,/g, "").length
+          const formatted = group(value.replace(/,/g, ""))
+          let caret = 0
+          for (let seen = 0; caret < formatted.length && seen < digitsBeforeCaret; caret++) {
+            if (formatted[caret] !== ",") seen++
+          }
+          this.el.value = formatted
+          this.el.setSelectionRange(caret, caret)
+        }
+      }
+    </script>
     """
   end
+
+  # A whole number of kilograms is shown with thousands separators; anything
+  # else (half-typed or invalid input) is shown exactly as entered.
+  defp display_mass(value) when is_binary(value) do
+    case Integer.parse(String.replace(value, ",", "")) do
+      {kg, ""} when kg >= 0 -> Format.number(kg)
+      {_kg, _rest} -> value
+      :error -> value
+    end
+  end
+
+  defp display_mass(nil), do: nil
 
   # Errors appear once the user has touched the field, not on first render.
   defp visible_error(%Phoenix.HTML.FormField{errors: [{message, _opts} | _rest]} = field) do
@@ -56,7 +111,7 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
 
   defp field_error(assigns) do
     ~H"""
-    <p id={@id} class="flex items-center gap-2 text-sm text-error">
+    <p id={@id} class="motion-fade flex items-center gap-2 text-sm text-error">
       <.icon name="hero-x-circle" class="size-4 shrink-0" />
       {@message}
     </p>

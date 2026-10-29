@@ -20,3 +20,6 @@ config :phoenix_live_view,
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
+
+# Keep the undo toast short so tests can watch it expire.
+config :fuel_calculator, undo_timeout_ms: 50

@@ -52,6 +52,14 @@ defmodule FuelCalculatorTest do
       assert next_step == step("launch moon")
     end
 
+    test "accepts thousands separators in the mass" do
+      params = params("28,801", "land earth")
+
+      evaluation = FuelCalculator.evaluate(params)
+
+      assert %Evaluation{report: %FuelReport{total_fuel_kg: 13_447}} = evaluation
+    end
+
     test "ignores whitespace around the mass" do
       params = params(" 28801 ", "land earth")
 
@@ -89,12 +97,14 @@ defmodule FuelCalculatorTest do
           {"   ", "Enter the spacecraft mass in kilograms."},
           {"-500", "Mass must be a positive number of kilograms."},
           {"0", "Mass must be at least 1 kg."},
-          {"28801.5", "Use whole kilograms, digits only, for example 28801."},
-          {"1e5", "Use whole kilograms, digits only, for example 28801."},
-          {"28,801", "Use whole kilograms, digits only, for example 28801."},
-          {"28801 kg", "Use whole kilograms, digits only, for example 28801."},
-          {"+5", "Use whole kilograms, digits only, for example 28801."},
+          {"28801.5", "Use whole kilograms, for example 28801 or 28,801."},
+          {"1e5", "Use whole kilograms, for example 28801 or 28,801."},
+          {"28,80,1", "Use whole kilograms, for example 28801 or 28,801."},
+          {"2,8801", "Use whole kilograms, for example 28801 or 28,801."},
+          {"28801 kg", "Use whole kilograms, for example 28801 or 28,801."},
+          {"+5", "Use whole kilograms, for example 28801 or 28,801."},
           {"1000000001", "Mass must be at most 1,000,000,000 kg."},
+          {"1,000,000,001", "Mass must be at most 1,000,000,000 kg."},
           {String.duplicate("9", 10_000), "Mass must be at most 1,000,000,000 kg."}
         ] do
       test "explains what is wrong with #{inspect(String.slice(raw, 0, 12))}" do
@@ -338,6 +348,17 @@ defmodule FuelCalculatorTest do
     test "offers the three spec missions" do
       assert Enum.map(FuelCalculator.presets(), & &1.name) ==
                ["Apollo 11", "Mars mission", "Passenger ship"]
+    end
+
+    test "reuses the current step ids by position, so rows on screen are updated" do
+      current = params("28801", "launch earth, land moon")
+
+      params = FuelCalculator.preset_params(:mars_mission, current)
+
+      assert [first, second | new_ids] = step_ids(params)
+      assert {first, second} == {"step-0", "step-1"}
+      assert length(new_ids) == 2
+      assert Enum.all?(new_ids, &(&1 not in ["step-0", "step-1"]))
     end
 
     test "gives each preset step a unique id" do

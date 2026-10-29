@@ -129,16 +129,19 @@ defmodule FuelCalculator.MissionParams do
   defp parse_trimmed_mass("-" <> _rest),
     do: {:error, "Mass must be a positive number of kilograms."}
 
+  # Plain digits, or digits grouped in threes by commas ("28,801").
+  @mass_format ~r/\A(\d+|\d{1,3}(,\d{3})+)\z/
+
   defp parse_trimmed_mass(text) do
     cond do
-      not Regex.match?(~r/\A\d+\z/, text) ->
-        {:error, "Use whole kilograms, digits only, for example 28801."}
+      not Regex.match?(@mass_format, text) ->
+        {:error, "Use whole kilograms, for example 28801 or 28,801."}
 
-      byte_size(text) > @max_mass_digits ->
+      text |> String.replace(",", "") |> byte_size() > @max_mass_digits ->
         {:error, "Mass must be at most 1,000,000,000 kg."}
 
       true ->
-        text |> String.to_integer() |> check_mass_range()
+        text |> String.replace(",", "") |> String.to_integer() |> check_mass_range()
     end
   end
 

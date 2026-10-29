@@ -10,26 +10,43 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
   alias FuelCalculator.Planet
   alias FuelCalculatorWeb.Format
 
-  @doc "The warning for the step with `step_id`."
+  @doc """
+  The warning for the step with `step_id`. Adding the missing steps is only
+  offered when they fit within the step limit; otherwise the button is
+  disabled and says why.
+  """
   attr :warning, PathWarning, required: true
   attr :step_id, :string, required: true
+  attr :room, :integer, required: true, doc: "how many more steps the path can take"
 
   def path_warning(assigns) do
+    assigns = assign(assigns, :fits, length(assigns.warning.insertion) <= assigns.room)
+
     ~H"""
     <div
       id={"warning-#{@step_id}"}
       role="status"
-      class="flex flex-wrap items-center gap-2.5 rounded-field border border-dashed border-neutral px-2.5 py-1.5 text-sm"
+      class="motion-fade flex flex-wrap items-center gap-2.5 rounded-field border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg"
     >
-      <.icon name="hero-exclamation-triangle" class="size-4 shrink-0" />
-      <span><b>Check path.</b> <span class="text-muted">{message(@warning)}</span></span>
+      <.icon name="hero-exclamation-triangle-solid" class="size-5 shrink-0 text-warn-icon" />
+      <span><b>Check path.</b> {message(@warning)}</span>
       <span class="ml-auto flex flex-wrap gap-2">
-        <.fix_button event="insert_fix" step_id={@step_id} class="btn-outline">
+        <.fix_button
+          event="insert_fix"
+          step_id={@step_id}
+          class="border-warn-border bg-base-100 text-base-content"
+          disabled={!@fits}
+          describedby={!@fits && "no-room-#{@step_id}"}
+        >
           {insert_label(@warning)}
         </.fix_button>
-        <.fix_button event="replace_fix" step_id={@step_id} class="btn-ghost">
+        <.fix_button event="replace_fix" step_id={@step_id} class="btn-ghost text-warn-fg">
           Change to {Format.step(@warning.replacement)}
         </.fix_button>
+      </span>
+      <span :if={!@fits} id={"no-room-#{@step_id}"} class="w-full text-[13px]">
+        There's no room to add {length(@warning.insertion)} more steps. Change this step,
+        or remove another step first.
       </span>
     </div>
     """
@@ -38,11 +55,20 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
   attr :event, :string, required: true
   attr :step_id, :string, required: true
   attr :class, :string, required: true
+  attr :disabled, :boolean, default: false
+  attr :describedby, :any, default: nil
   slot :inner_block, required: true
 
   defp fix_button(assigns) do
     ~H"""
-    <button type="button" phx-click={@event} phx-value-id={@step_id} class={["btn btn-sm", @class]}>
+    <button
+      type="button"
+      phx-click={@event}
+      phx-value-id={@step_id}
+      disabled={@disabled}
+      aria-describedby={@describedby}
+      class={["btn btn-sm", @class]}
+    >
       {render_slot(@inner_block)}
     </button>
     """

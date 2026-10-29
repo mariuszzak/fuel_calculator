@@ -10,17 +10,23 @@ defmodule FuelCalculatorWeb.MissionLive do
   import FuelCalculatorWeb.Mission.FlightPathComponents
   import FuelCalculatorWeb.Mission.SpacecraftComponents
   import FuelCalculatorWeb.Mission.SummaryComponents
+  import FuelCalculatorWeb.Mission.UndoComponents
 
   alias FuelCalculator.Evaluation
   alias FuelCalculator.PathWarning
+  alias FuelCalculator.Preset
+  alias FuelCalculatorWeb.Format
+  alias FuelCalculatorWeb.MissionLive.Undo
 
   @default_preset :apollo_11
+  # How long the undo toast stays; shorter in tests (config/test.exs).
+  @undo_timeout_ms Application.compile_env(:fuel_calculator, :undo_timeout_ms, 6_000)
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(page_title: "Mission planner", presets: FuelCalculator.presets())
+     |> assign(page_title: "Mission planner", presets: FuelCalculator.presets(), undo: nil)
      |> load_preset(@default_preset)}
   end
 
@@ -56,6 +62,7 @@ defmodule FuelCalculatorWeb.MissionLive do
         <.formula_note />
       </.form>
       <.pinned_total evaluation={@evaluation} />
+      <.undo_toast undo={@undo} />
     </Layouts.app>
     """
   end
@@ -85,8 +92,11 @@ defmodule FuelCalculatorWeb.MissionLive do
 
   def handle_event("load_preset", %{"id" => id}, socket) do
     case preset_id(id) do
-      {:ok, preset_id} -> {:noreply, load_preset(socket, preset_id)}
-      :error -> {:noreply, socket}
+      {:ok, preset_id} ->
+        {:noreply, socket |> offer_preset_undo(preset_id) |> load_preset(preset_id)}
+
+      :error ->
+        {:noreply, socket}
     end
   end
 
@@ -95,14 +105,30 @@ defmodule FuelCalculatorWeb.MissionLive do
   end
 
   def handle_event("remove_step", %{"id" => id}, socket) when is_binary(id) do
-    {:noreply, edit(socket, &FuelCalculator.remove_step(&1, id))}
+    case removal_label(socket.assigns.evaluation, id) do
+      nil ->
+        {:noreply, socket}
+
+      label ->
+        {:noreply,
+         socket
+         |> remember_for_undo(label)
+         |> edit(&FuelCalculator.remove_step(&1, id))
+         |> push_event("focus", %{id: "undo-button"})}
+    end
   end
 
   def handle_event("move_step", %{"id" => id, "direction" => direction}, socket)
       when is_binary(id) do
     case direction(direction) do
-      {:ok, direction} -> {:noreply, edit(socket, &FuelCalculator.move_step(&1, id, direction))}
-      :error -> {:noreply, socket}
+      {:ok, direction} ->
+        {:noreply,
+         socket
+         |> edit(&FuelCalculator.move_step(&1, id, direction))
+         |> focus_moved_step(id, direction)}
+
+      :error ->
+        {:noreply, socket}
     end
   end
 
@@ -133,13 +159,93 @@ defmodule FuelCalculatorWeb.MissionLive do
   end
 
   def handle_event("clear_path", _params, socket) do
-    {:noreply, edit(socket, &FuelCalculator.clear_steps/1)}
+    case length(socket.assigns.evaluation.step_ids) do
+      0 ->
+        {:noreply, socket}
+
+      count ->
+        {:noreply,
+         socket
+         |> remember_for_undo("Cleared #{count} #{if count == 1, do: "step", else: "steps"}")
+         |> edit(&FuelCalculator.clear_steps/1)
+         |> push_event("focus", %{id: "undo-button"})}
+    end
+  end
+
+  def handle_event("undo", _params, socket) do
+    case socket.assigns.undo do
+      %Undo{params: params, preset_id: preset_id, modified: modified} ->
+        {:noreply,
+         socket
+         |> assign(undo: nil, preset_id: preset_id, modified: modified)
+         |> put_params(params)}
+
+      nil ->
+        {:noreply, socket}
+    end
+  end
+
+  @impl Phoenix.LiveView
+  def handle_info({:expire_undo, ref}, socket) do
+    case socket.assigns.undo do
+      %Undo{ref: ^ref} -> {:noreply, assign(socket, undo: nil)}
+      # A newer undo replaced this one; its own timer will clear it.
+      %Undo{} -> {:noreply, socket}
+      nil -> {:noreply, socket}
+    end
+  end
+
+  # Keyboard focus follows the moved step. At the top or bottom edge the button
+  # that was used is disabled, so focus its opposite instead.
+  defp focus_moved_step(socket, id, direction) do
+    %Evaluation{step_ids: step_ids} = socket.assigns.evaluation
+    index = Enum.find_index(step_ids, &(&1 == id))
+    last = length(step_ids) - 1
+
+    button =
+      case {direction, index} do
+        {:up, 0} -> "move-down-"
+        {:down, ^last} -> "move-up-"
+        {:up, _index} -> "move-up-"
+        {:down, _index} -> "move-down-"
+      end
+
+    push_event(socket, "focus", %{id: button <> id})
+  end
+
+  defp remember_for_undo(socket, label) do
+    %{params: params, preset_id: preset_id, modified: modified} = socket.assigns
+    %Undo{ref: ref} = undo = Undo.new(label, params, preset_id, modified)
+    Process.send_after(self(), {:expire_undo, ref}, @undo_timeout_ms)
+    assign(socket, undo: undo)
+  end
+
+  # Loading a preset over the user's own edits can be undone; switching between
+  # untouched presets loses nothing, so it needs no toast.
+  defp offer_preset_undo(%{assigns: %{modified: true}} = socket, preset_id) do
+    %Preset{name: name} = Enum.find(socket.assigns.presets, &match?(%Preset{id: ^preset_id}, &1))
+    remember_for_undo(socket, "Loaded #{name}")
+  end
+
+  defp offer_preset_undo(socket, _preset_id), do: socket
+
+  defp removal_label(%Evaluation{step_ids: step_ids, steps: steps}, id) do
+    case Enum.find_index(step_ids, &(&1 == id)) do
+      nil ->
+        nil
+
+      index when length(steps) == length(step_ids) ->
+        "Removed step #{index + 1}: #{Format.step(Enum.at(steps, index))}"
+
+      index ->
+        "Removed step #{index + 1}"
+    end
   end
 
   defp load_preset(socket, preset_id) do
     socket
     |> assign(preset_id: preset_id, modified: false)
-    |> put_params(FuelCalculator.preset_params(preset_id))
+    |> put_params(FuelCalculator.preset_params(preset_id, socket.assigns[:params] || %{}))
   end
 
   defp edit(socket, fun) do

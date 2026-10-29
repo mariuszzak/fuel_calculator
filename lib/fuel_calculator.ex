@@ -27,9 +27,14 @@ defmodule FuelCalculator do
   @spec presets() :: [Preset.t()]
   defdelegate presets, to: Preset, as: :all
 
-  @doc "Form params for a preset mission, with fresh step ids."
-  @spec preset_params(Preset.id()) :: params()
-  def preset_params(preset_id), do: preset_id |> Preset.fetch!() |> ParamsEditor.from_preset()
+  @doc """
+  Form params for a preset mission. Step ids are taken from `current` by
+  position where possible (so rows on screen are updated, not replaced), and
+  generated for the rest.
+  """
+  @spec preset_params(Preset.id(), params()) :: params()
+  def preset_params(preset_id, current \\ %{}),
+    do: preset_id |> Preset.fetch!() |> ParamsEditor.from_preset(current)
 
   @doc """
   Validates mission params and works out everything to show: the form, the
