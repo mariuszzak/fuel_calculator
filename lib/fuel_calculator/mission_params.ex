@@ -34,17 +34,16 @@ defmodule FuelCalculator.MissionParams do
     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
     def changeset(%__MODULE__{} = step, attrs) do
       step
-      # Ids are always present and well formed: RawParams guarantees it.
-      |> cast(attrs, [:id, :action, :planet], message: &cast_message/2)
-      |> validate_required([:action], message: "Choose launch or land.")
-      |> validate_required([:planet], message: "Choose Earth, Moon or Mars.")
+      # Ids are always present and well formed: RawParams guarantees it. A
+      # missing or unknown action or planet becomes :unknown_action /
+      # :unknown_planet when the errors are collected.
+      |> cast(attrs, [:id, :action, :planet])
+      |> validate_required([:action, :planet])
     end
-
-    defp cast_message(:action, _meta), do: "Choose launch or land."
-    defp cast_message(:planet, _meta), do: "Choose Earth, Moon or Mars."
   end
 
   @max_steps 20
+  @min_mass_kg 1
   @max_mass_kg 1_000_000_000
   # Longer digit strings are out of range; checked before converting to an integer.
   @max_mass_digits @max_mass_kg |> Integer.digits() |> length()
@@ -58,6 +57,14 @@ defmodule FuelCalculator.MissionParams do
     field(:mass, :string)
     embeds_many(:steps, StepParams, on_replace: :delete)
   end
+
+  @doc false
+  @spec min_mass_kg() :: 1
+  def min_mass_kg, do: @min_mass_kg
+
+  @doc false
+  @spec max_mass_kg() :: 1_000_000_000
+  def max_mass_kg, do: @max_mass_kg
 
   @doc false
   @spec max_mass_length() :: 32
@@ -126,18 +133,21 @@ defmodule FuelCalculator.MissionParams do
 
   defp validate_mass(changeset) do
     case changeset |> get_field(:mass) |> parse_mass() do
-      {:ok, _mass_kg} -> changeset
-      {:error, message} -> add_error(changeset, :mass, message)
+      {:ok, _mass_kg} ->
+        changeset
+
+      {:error, code, details} ->
+        add_error(changeset, :mass, "is invalid", code: code, details: details)
     end
   end
 
-  defp parse_mass(nil), do: {:error, "Enter the spacecraft mass in kilograms."}
+  defp parse_mass(nil), do: {:error, :required, %{}}
   defp parse_mass(raw) when is_binary(raw), do: raw |> String.trim() |> parse_trimmed_mass()
 
   defp parse_trimmed_mass(""), do: parse_mass(nil)
 
   defp parse_trimmed_mass("-" <> _rest),
-    do: {:error, "Mass must be a positive number of kilograms."}
+    do: {:error, :negative, %{}}
 
   # Plain digits, or digits grouped in threes by commas ("28,801").
   @mass_format ~r/\A(\d+|\d{1,3}(,\d{3})+)\z/
@@ -145,13 +155,13 @@ defmodule FuelCalculator.MissionParams do
   defp parse_trimmed_mass(text) do
     cond do
       String.length(text) > @max_mass_length ->
-        {:error, "Mass must be at most 1,000,000,000 kg."}
+        {:error, :too_large, %{max: @max_mass_kg}}
 
       not Regex.match?(@mass_format, text) ->
-        {:error, "Use whole kilograms, for example 28801 or 28,801."}
+        {:error, :not_whole_kg, %{}}
 
       significant_digits(text) |> byte_size() > @max_mass_digits ->
-        {:error, "Mass must be at most 1,000,000,000 kg."}
+        {:error, :too_large, %{max: @max_mass_kg}}
 
       true ->
         text |> significant_digits() |> String.to_integer() |> check_mass_range()
@@ -167,10 +177,11 @@ defmodule FuelCalculator.MissionParams do
     end
   end
 
-  defp check_mass_range(mass_kg) when mass_kg < 1, do: {:error, "Mass must be at least 1 kg."}
+  defp check_mass_range(mass_kg) when mass_kg < @min_mass_kg,
+    do: {:error, :too_small, %{min: @min_mass_kg}}
 
   defp check_mass_range(mass_kg) when mass_kg > @max_mass_kg,
-    do: {:error, "Mass must be at most 1,000,000,000 kg."}
+    do: {:error, :too_large, %{max: @max_mass_kg}}
 
   defp check_mass_range(mass_kg), do: {:ok, mass_kg}
 
@@ -178,7 +189,10 @@ defmodule FuelCalculator.MissionParams do
   # request is rejected without processing every step.
   defp cast_steps(changeset, attrs) do
     if raw_step_count(Map.get(attrs, "steps")) > @max_steps do
-      add_error(changeset, :steps, "A flight path holds up to #{@max_steps} steps.")
+      add_error(changeset, :steps, "is invalid",
+        code: :too_many_steps,
+        details: %{max: @max_steps}
+      )
     else
       cast_embed(changeset, :steps, with: &StepParams.changeset/2)
     end
@@ -189,25 +203,37 @@ defmodule FuelCalculator.MissionParams do
 
   defp invalid_mission(changeset) do
     changeset
-    # Our messages have no %{placeholders} to interpolate.
-    |> traverse_errors(fn {message, _opts} -> message end)
+    |> traverse_errors(&error_code/3)
     |> flatten_errors([])
     |> InvalidMission.new()
   end
 
+  # Mass and step-count errors carry their code; a step's action or planet
+  # error (missing or unknown) is identified by the field.
+  defp error_code(_changeset, _field, {_message, opts}) when is_list(opts) do
+    case {Keyword.fetch(opts, :code), Keyword.get(opts, :details, %{})} do
+      {{:ok, code}, details} -> {code, details}
+      {:error, _details} -> nil
+    end
+  end
+
   defp flatten_errors(errors, path) when is_map(errors) do
     errors
-    |> Enum.sort_by(fn {field, _messages} -> to_string(field) end)
+    |> Enum.sort_by(fn {field, _codes} -> to_string(field) end)
     |> Enum.flat_map(fn {field, value} -> flatten_value(value, path ++ [field]) end)
   end
 
-  # A field's value is either a list of messages or, for embeds, one error map per step.
+  # A field's value is either a list of codes or, for embeds, one error map per step.
   defp flatten_value(values, path) when is_list(values) do
     values
     |> Enum.with_index()
     |> Enum.flat_map(fn
-      {message, _index} when is_binary(message) -> [FieldError.new(path, message)]
+      {{code, details}, _index} when is_atom(code) -> [FieldError.new(path, code, details)]
+      {nil, _index} -> [FieldError.new(path, step_field_code(List.last(path)))]
       {nested, index} when is_map(nested) -> flatten_errors(nested, path ++ [index])
     end)
   end
+
+  defp step_field_code(:action), do: :unknown_action
+  defp step_field_code(:planet), do: :unknown_planet
 end

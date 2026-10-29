@@ -15,7 +15,7 @@ defmodule FuelCalculator.EdgeCasesTest do
   alias FuelCalculator.FuelReport
   alias FuelCalculator.PathWarning
 
-  @whole_kilograms "Use whole kilograms, for example 28801 or 28,801."
+  @not_whole_kg {:not_whole_kg, %{}}
 
   defp indexed_steps(count) do
     Map.new(0..(count - 1), fn index ->
@@ -42,15 +42,15 @@ defmodule FuelCalculator.EdgeCasesTest do
       end
     end
 
-    for {raw, message} <- [
-          {"000", "Mass must be at least 1 kg."},
-          {"２８８０１", @whole_kilograms},
-          {"٢٨٨٠١", @whole_kilograms},
-          {"​28801", @whole_kilograms},
-          {"28 801", @whole_kilograms},
-          {"1,0000", @whole_kilograms},
-          {"28801,", @whole_kilograms},
-          {",28801", @whole_kilograms}
+    for {raw, {code, details}} <- [
+          {"000", {:too_small, %{min: 1}}},
+          {"２８８０１", @not_whole_kg},
+          {"٢٨٨٠١", @not_whole_kg},
+          {"​28801", @not_whole_kg},
+          {"28 801", @not_whole_kg},
+          {"1,0000", @not_whole_kg},
+          {"28801,", @not_whole_kg},
+          {",28801", @not_whole_kg}
         ] do
       test "rejects #{inspect(raw)}" do
         params = form_params(unquote(raw), "land earth")
@@ -58,7 +58,11 @@ defmodule FuelCalculator.EdgeCasesTest do
         evaluation = FuelCalculator.evaluate(params)
 
         assert %Evaluation{report: nil, error: error} = evaluation
-        assert error == InvalidMission.new([FieldError.new([:mass], unquote(message))])
+
+        assert error ==
+                 InvalidMission.new([
+                   FieldError.new([:mass], unquote(code), unquote(Macro.escape(details)))
+                 ])
       end
     end
 
@@ -70,7 +74,7 @@ defmodule FuelCalculator.EdgeCasesTest do
 
         assert error ==
                  InvalidMission.new([
-                   FieldError.new([:mass], "Mass must be at most 1,000,000,000 kg.")
+                   FieldError.new([:mass], :too_large, %{max: 1_000_000_000})
                  ])
       end
     end
@@ -92,7 +96,7 @@ defmodule FuelCalculator.EdgeCasesTest do
 
       assert error ==
                InvalidMission.new([
-                 FieldError.new([:mass], "Enter the spacecraft mass in kilograms.")
+                 FieldError.new([:mass], :required)
                ])
     end
   end
@@ -112,7 +116,7 @@ defmodule FuelCalculator.EdgeCasesTest do
 
       assert error ==
                InvalidMission.new([
-                 FieldError.new([:steps], "A flight path holds up to 20 steps.")
+                 FieldError.new([:steps], :too_many_steps, %{max: 20})
                ])
     end
 

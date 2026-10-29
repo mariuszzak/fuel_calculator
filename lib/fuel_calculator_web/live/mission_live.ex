@@ -50,7 +50,7 @@ defmodule FuelCalculatorWeb.MissionLive do
         >
           <div class="surface flex flex-col justify-between gap-5 p-4 sm:gap-6 sm:p-6">
             <h2 class="text-xs font-semibold uppercase tracking-wider text-muted">Spacecraft</h2>
-            <.mass_field field={@form[:mass]} />
+            <.mass_field field={@form[:mass]} error={Evaluation.mass_error(@evaluation)} />
             <.preset_picker presets={@presets} active_id={@preset_id} modified={@modified} />
           </div>
           <.summary_panel evaluation={@evaluation} />

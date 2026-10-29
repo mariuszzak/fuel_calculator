@@ -18,6 +18,7 @@ defmodule FuelCalculator.Evaluation do
   functions below, so there is one source for each.
   """
 
+  alias FuelCalculator.Error.FieldError
   alias FuelCalculator.Error.InvalidMission
   alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FlightStep
@@ -99,6 +100,20 @@ defmodule FuelCalculator.Evaluation do
       nil -> nil
     end
   end
+
+  @doc "What is wrong with the mass, or `nil` when it's valid."
+  @spec mass_error(t()) :: FieldError.t() | nil
+  def mass_error(%__MODULE__{error: %InvalidMission{errors: errors}}),
+    do: Enum.find(errors, &match?(%FieldError{path: [:mass]}, &1))
+
+  def mass_error(%__MODULE__{error: nil}), do: nil
+
+  @doc "Errors about the flight path as a whole (e.g. too many steps), not one step."
+  @spec path_errors(t()) :: [FieldError.t()]
+  def path_errors(%__MODULE__{error: %InvalidMission{errors: errors}}),
+    do: for(%FieldError{path: [:steps]} = error <- errors, do: error)
+
+  def path_errors(%__MODULE__{error: nil}), do: []
 
   @doc "How many more steps the path can take."
   @spec room(t()) :: non_neg_integer()

@@ -73,6 +73,11 @@ for the three missions).
 - **Planet and action values only come from a fixed list.** Anything else
   (e.g. a tampered request with "pluto") is rejected and never turned into an
   atom.
+- **The domain reports what is wrong, the screen says it.** Validation
+  returns a code per field (`:not_whole_kg`, `:too_large` with the limit,
+  `:unknown_planet`, …); all wording lives in the web layer. The domain stays
+  free of copy, tests of the rules don't break when a sentence changes, and
+  the messages could be translated without touching the calculation.
 
 ## Flight path editing
 

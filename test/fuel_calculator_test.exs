@@ -78,20 +78,20 @@ defmodule FuelCalculatorTest do
   end
 
   describe "rejecting an invalid mass" do
-    for {raw, message} <- [
-          {"", "Enter the spacecraft mass in kilograms."},
-          {"   ", "Enter the spacecraft mass in kilograms."},
-          {"-500", "Mass must be a positive number of kilograms."},
-          {"0", "Mass must be at least 1 kg."},
-          {"28801.5", "Use whole kilograms, for example 28801 or 28,801."},
-          {"1e5", "Use whole kilograms, for example 28801 or 28,801."},
-          {"28,80,1", "Use whole kilograms, for example 28801 or 28,801."},
-          {"2,8801", "Use whole kilograms, for example 28801 or 28,801."},
-          {"28801 kg", "Use whole kilograms, for example 28801 or 28,801."},
-          {"+5", "Use whole kilograms, for example 28801 or 28,801."},
-          {"1000000001", "Mass must be at most 1,000,000,000 kg."},
-          {"1,000,000,001", "Mass must be at most 1,000,000,000 kg."},
-          {String.duplicate("9", 10_000), "Mass must be at most 1,000,000,000 kg."}
+    for {raw, {code, details}} <- [
+          {"", {:required, %{}}},
+          {"   ", {:required, %{}}},
+          {"-500", {:negative, %{}}},
+          {"0", {:too_small, %{min: 1}}},
+          {"28801.5", {:not_whole_kg, %{}}},
+          {"1e5", {:not_whole_kg, %{}}},
+          {"28,80,1", {:not_whole_kg, %{}}},
+          {"2,8801", {:not_whole_kg, %{}}},
+          {"28801 kg", {:not_whole_kg, %{}}},
+          {"+5", {:not_whole_kg, %{}}},
+          {"1000000001", {:too_large, %{max: 1_000_000_000}}},
+          {"1,000,000,001", {:too_large, %{max: 1_000_000_000}}},
+          {String.duplicate("9", 10_000), {:too_large, %{max: 1_000_000_000}}}
         ] do
       test "explains what is wrong with #{inspect(String.slice(raw, 0, 12))}" do
         params = form_params(unquote(raw), "land earth")
@@ -99,7 +99,11 @@ defmodule FuelCalculatorTest do
         evaluation = FuelCalculator.evaluate(params)
 
         assert %Evaluation{report: nil, error: error} = evaluation
-        assert error == InvalidMission.new([FieldError.new([:mass], unquote(message))])
+
+        assert error ==
+                 InvalidMission.new([
+                   FieldError.new([:mass], unquote(code), unquote(Macro.escape(details)))
+                 ])
       end
     end
 
@@ -110,7 +114,7 @@ defmodule FuelCalculatorTest do
 
       assert error ==
                InvalidMission.new([
-                 FieldError.new([:mass], "Enter the spacecraft mass in kilograms.")
+                 FieldError.new([:mass], :required)
                ])
     end
 
@@ -141,7 +145,7 @@ defmodule FuelCalculatorTest do
 
       assert error ==
                InvalidMission.new([
-                 FieldError.new([:steps, 0, :planet], "Choose Earth, Moon or Mars.")
+                 FieldError.new([:steps, 0, :planet], :unknown_planet)
                ])
     end
 
@@ -157,7 +161,7 @@ defmodule FuelCalculatorTest do
 
       assert error ==
                InvalidMission.new([
-                 FieldError.new([:steps, 0, :action], "Choose launch or land.")
+                 FieldError.new([:steps, 0, :action], :unknown_action)
                ])
     end
 
@@ -176,7 +180,7 @@ defmodule FuelCalculatorTest do
 
       assert error ==
                InvalidMission.new([
-                 FieldError.new([:steps, 1, :planet], "Choose Earth, Moon or Mars.")
+                 FieldError.new([:steps, 1, :planet], :unknown_planet)
                ])
 
       assert steps == [step("launch earth")]
@@ -191,7 +195,7 @@ defmodule FuelCalculatorTest do
 
       assert error ==
                InvalidMission.new([
-                 FieldError.new([:steps], "A flight path holds up to 20 steps.")
+                 FieldError.new([:steps], :too_many_steps, %{max: 20})
                ])
     end
   end
@@ -220,7 +224,7 @@ defmodule FuelCalculatorTest do
       assert [first, second] == steps("launch earth, land moon")
     end
 
-    test "puts each step's messages on its own row" do
+    test "puts each step's errors on its own row" do
       params = %{
         "mass" => "1000",
         "steps" => [
@@ -237,8 +241,8 @@ defmodule FuelCalculatorTest do
 
       assert second ==
                Row.new("b", nil, nil, nil, [
-                 "Choose launch or land.",
-                 "Choose Earth, Moon or Mars."
+                 FieldError.new([:steps, 1, :action], :unknown_action),
+                 FieldError.new([:steps, 1, :planet], :unknown_planet)
                ])
     end
   end
@@ -264,9 +268,9 @@ defmodule FuelCalculatorTest do
       assert result ==
                {:error,
                 InvalidMission.new([
-                  FieldError.new([:mass], "Mass must be at least 1 kg."),
-                  FieldError.new([:steps, 0, :action], "Choose launch or land."),
-                  FieldError.new([:steps, 0, :planet], "Choose Earth, Moon or Mars.")
+                  FieldError.new([:mass], :too_small, %{min: 1}),
+                  FieldError.new([:steps, 0, :action], :unknown_action),
+                  FieldError.new([:steps, 0, :planet], :unknown_planet)
                 ])}
     end
   end

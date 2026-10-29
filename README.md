@@ -178,7 +178,7 @@ sequenceDiagram
         API->>Core: Fuel.for_mission(mission)
         Core-->>API: FuelReport
     else a field is invalid
-        MP-->>API: InvalidMission with one FieldError per message
+        MP-->>API: InvalidMission with one FieldError (path + code) per problem
     end
     opt every step is valid (mass may be invalid)
         API->>Core: FlightPath.warnings(steps)
@@ -205,6 +205,7 @@ Loading a preset and undo also just set new params and call `evaluate/1`.
 | `FuelCalculator.ParamsEditor` | Add, move, remove and fix steps in the params |
 | `FuelCalculator.Preset` | The three spec missions, shared by the UI and the acceptance tests |
 | `FuelCalculatorWeb.MissionLive` | The only page (`/`): keeps the form params, handles events, undo and focus, renders components |
+| `FuelCalculatorWeb.ErrorMessages` | The wording of every validation error. The domain reports a `FieldError` code (`:too_large` with `%{max: …}`, `:unknown_planet`, …), never a sentence |
 | `FuelCalculatorWeb.Mission.Spine` | Geometry of the flight spine arcs beside the steps |
 
 ### The screen
@@ -244,7 +245,7 @@ test/
 
 ## Tests
 
-221 tests (199 examples, 7 StreamData properties, 15 doctests); the suite
+244 tests (221 examples, 7 StreamData properties, 16 doctests); the suite
 runs in about 2 seconds.
 
 | Layer | What is covered |

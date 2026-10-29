@@ -12,14 +12,13 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   import FuelCalculatorWeb.Mission.PlanetComponents
   import FuelCalculatorWeb.Mission.SpineComponents
 
-  alias FuelCalculator.Error.FieldError
-  alias FuelCalculator.Error.InvalidMission
   alias FuelCalculator.Evaluation
   alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FlightStep
   alias FuelCalculator.FuelReport
   alias FuelCalculator.Planet
   alias FuelCalculator.StepFuel
+  alias FuelCalculatorWeb.ErrorMessages
   alias FuelCalculatorWeb.Format
   alias FuelCalculatorWeb.Mission.Spine
 
@@ -29,7 +28,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   attr :selected_step_id, :string, default: nil
 
   def flight_path(assigns) do
-    %Evaluation{report: report, rows: rows, error: error} = evaluation = assigns.evaluation
+    %Evaluation{report: report, rows: rows} = evaluation = assigns.evaluation
 
     assigns =
       assign(assigns,
@@ -38,7 +37,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         rows: rows,
         arcs: arcs(report, rows),
         max_fuel: max_fuel(report),
-        path_errors: path_errors(error)
+        path_errors: Evaluation.path_errors(evaluation)
       )
 
     ~H"""
@@ -63,9 +62,9 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         </.inputs_for>
       </ol>
       <.field_error
-        :for={{message, index} <- Enum.with_index(@path_errors)}
+        :for={{error, index} <- Enum.with_index(@path_errors)}
         id={"path-error-#{index}"}
-        message={message}
+        message={ErrorMessages.text(error)}
       />
       <.empty_path :if={@count == 0 and @path_errors == []} />
       <.add_step_button
@@ -122,12 +121,6 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       %Row{step: nil} -> nil
     end)
   end
-
-  # Errors about the path as a whole (e.g. too many steps), not one step.
-  defp path_errors(%InvalidMission{errors: errors}),
-    do: for(%FieldError{path: [:steps], message: message} <- errors, do: message)
-
-  defp path_errors(nil), do: []
 
   # Fuel bars are scaled to the step needing the most fuel.
   defp max_fuel(%FuelReport{steps: steps}),
@@ -242,9 +235,9 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         </div>
         <div class="col-span-2 flex flex-col gap-2 has-[*]:pt-2 sm:contents">
           <.field_error
-            :for={{message, index} <- Enum.with_index(@errors)}
+            :for={{error, index} <- Enum.with_index(@errors)}
             id={"step-#{@id}-error-#{index}"}
-            message={message}
+            message={ErrorMessages.text(error)}
           /><.mass_at_burn :if={@fuel} id={@id} fuel={@fuel} index={@index} count={@count} /><.no_fuel_needed
             :if={@fuel && @fuel.fuel_kg == 0}
             id={"no-fuel-#{@id}"}

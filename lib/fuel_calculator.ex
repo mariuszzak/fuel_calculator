@@ -117,13 +117,13 @@ defmodule FuelCalculator do
   defp errors_by_step(errors) do
     errors
     |> Enum.flat_map(fn
-      %FieldError{path: [:steps, index | _field], message: message} when is_integer(index) ->
-        [{index, message}]
+      %FieldError{path: [:steps, index | _field]} = error when is_integer(index) ->
+        [{index, error}]
 
       %FieldError{} ->
         []
     end)
-    |> Enum.group_by(fn {index, _message} -> index end, fn {_index, message} -> message end)
+    |> Enum.group_by(fn {index, _error} -> index end, fn {_index, error} -> error end)
   end
 
   @doc "Turns mission params into a validated mission."
@@ -142,6 +142,10 @@ defmodule FuelCalculator do
     %Preset{mission: %Mission{} = mission} = Preset.fetch!(preset_id)
     match?(%FuelReport{mission: ^mission}, report)
   end
+
+  @doc "The lightest and heaviest equipment mass accepted, in kilograms."
+  @spec mass_range() :: Range.t()
+  def mass_range, do: MissionParams.min_mass_kg()..MissionParams.max_mass_kg()
 
   @doc "The fuel needed for a mission, step by step."
   @spec fuel_report(Mission.t()) :: FuelReport.t()

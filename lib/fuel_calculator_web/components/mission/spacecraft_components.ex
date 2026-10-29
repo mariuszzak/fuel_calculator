@@ -7,7 +7,9 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
 
   import FuelCalculatorWeb.Mission.ErrorComponents
 
+  alias FuelCalculator.Error.FieldError
   alias FuelCalculator.Preset
+  alias FuelCalculatorWeb.ErrorMessages
   alias FuelCalculatorWeb.Format
 
   # Wait for a pause in typing so "28801" doesn't recalculate five times.
@@ -15,9 +17,17 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
 
   @doc "The equipment mass input with its unit and validation message."
   attr :field, Phoenix.HTML.FormField, required: true
+  attr :error, FieldError, default: nil, doc: "what is wrong with the mass, if anything"
 
   def mass_field(assigns) do
-    assigns = assign(assigns, error: visible_error(assigns.field), debounce_ms: @mass_debounce_ms)
+    min..max//_step = FuelCalculator.mass_range()
+
+    assigns =
+      assign(assigns,
+        message: visible_message(assigns.field, assigns.error),
+        debounce_ms: @mass_debounce_ms,
+        hint: "In whole kilograms, from #{Format.number(min)} to #{Format.number(max)}."
+      )
 
     ~H"""
     <div class="flex flex-col gap-1.5">
@@ -28,7 +38,7 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
         id="mass-field"
         class={[
           "flex max-w-sm items-stretch rounded-field border bg-base-200 transition-colors focus-within:bg-base-100 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-base-content",
-          if(@error, do: "border-error", else: "border-rule-strong focus-within:border-accent")
+          if(@message, do: "border-error", else: "border-rule-strong focus-within:border-accent")
         ]}
       >
         <input
@@ -40,14 +50,14 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
           inputmode="numeric"
           autocomplete="off"
           phx-debounce={@debounce_ms}
-          aria-invalid={to_string(@error != nil)}
-          aria-describedby={if @error, do: "mass-hint mass-error", else: "mass-hint"}
+          aria-invalid={to_string(@message != nil)}
+          aria-describedby={if @message, do: "mass-hint mass-error", else: "mass-hint"}
           class="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 font-mono text-[clamp(1.125rem,5.6vw,1.375rem)] outline-none"
         />
         <span class="flex items-center px-4 font-mono text-muted" aria-hidden="true">kg</span>
       </div>
-      <span id="mass-hint" class="sr-only">In whole kilograms, from 1 to 1,000,000,000.</span>
-      <.field_error :if={@error} id="mass-error" message={@error} />
+      <span id="mass-hint" class="sr-only">{@hint}</span>
+      <.field_error :if={@message} id="mass-error" message={@message} />
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".MassInput">
       // Digits only. Typing anything else does nothing. A paste is accepted when
@@ -126,11 +136,10 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
   defp display_mass(%Phoenix.HTML.FormField{value: value}), do: value
 
   # Errors appear once the user has touched the field, not on first render.
-  defp visible_error(%Phoenix.HTML.FormField{errors: [{message, _opts} | _rest]} = field) do
-    if used_input?(field), do: message
-  end
+  defp visible_message(%Phoenix.HTML.FormField{} = field, %FieldError{} = error),
+    do: if(used_input?(field), do: ErrorMessages.text(error))
 
-  defp visible_error(%Phoenix.HTML.FormField{errors: []}), do: nil
+  defp visible_message(%Phoenix.HTML.FormField{}, nil), do: nil
 
   @doc "One-click example missions. The active one is marked once it's edited."
   attr :presets, :list, required: true
