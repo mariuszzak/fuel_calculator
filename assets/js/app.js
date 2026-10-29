@@ -26,8 +26,9 @@ import {hooks as colocatedHooks} from "phoenix-colocated/fuel_calculator"
 import topbar from "../vendor/topbar"
 
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
+// WebSocket only: the server has no long-polling endpoint (see endpoint.ex), so
+// there's no fallback to switch to; LiveView keeps retrying the WebSocket.
 const liveSocket = new LiveSocket("/live", Socket, {
-  longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
   hooks: {...colocatedHooks},
 })
