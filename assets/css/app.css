@@ -18,36 +18,37 @@
   themes: false;
 }
 
-/* Themes: see DESIGN.md. Light mirrors dark; mint marks fuel and nothing else.
-   Named "light" and "dark" so Phoenix's theme toggle and theme.js work unchanged. */
+/* Themes: see DESIGN.md. Warm stone, violet marks fuel and nothing else; the
+   light theme mirrors the dark one. Named "light" and "dark" so Phoenix's
+   theme toggle and theme.js work unchanged. */
 @plugin "daisyui/packages/bundle/daisyui-theme" {
   name: "light";
   default: true;
   prefersdark: false;
   color-scheme: "light";
-  --color-base-100: #F6F8FB;
-  --color-base-200: #E9EEF4;
-  --color-base-300: #DCE3EB;
-  --color-base-content: #161C24;
-  --color-primary: #161C24;
-  --color-primary-content: #F6F8FB;
-  --color-secondary: #4A5767;
-  --color-secondary-content: #F6F8FB;
-  --color-accent: #18915F;
-  --color-accent-content: #161C24;
-  --color-neutral: #748296;
-  --color-neutral-content: #161C24;
+  --color-base-100: #FBFAF8;
+  --color-base-200: #F1EFEC;
+  --color-base-300: #E6E2DD;
+  --color-base-content: #1F1B24;
+  --color-primary: #1F1B24;
+  --color-primary-content: #FBFAF8;
+  --color-secondary: #5A5560;
+  --color-secondary-content: #FBFAF8;
+  --color-accent: #7354E8;
+  --color-accent-content: #1F1B24;
+  --color-neutral: #857E78;
+  --color-neutral-content: #1F1B24;
   --color-info: #2C6DB5;
-  --color-info-content: #F6F8FB;
-  --color-success: #14805A;
-  --color-success-content: #F6F8FB;
+  --color-info-content: #FBFAF8;
+  --color-success: #5F42D6;
+  --color-success-content: #FBFAF8;
   --color-warning: #B7791F;
-  --color-warning-content: #161C24;
+  --color-warning-content: #1F1B24;
   --color-error: #B42318;
-  --color-error-content: #F6F8FB;
-  --radius-selector: 0.375rem;
-  --radius-field: 0.375rem;
-  --radius-box: 0.625rem;
+  --color-error-content: #FBFAF8;
+  --radius-selector: 2rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1.25rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
@@ -60,29 +61,29 @@
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: #1E2630;
-  --color-base-200: #161C24;
-  --color-base-300: #27313D;
-  --color-base-content: #E9EEF4;
-  --color-primary: #E9EEF4;
-  --color-primary-content: #161C24;
-  --color-secondary: #A1AEBE;
-  --color-secondary-content: #161C24;
-  --color-accent: #4FCF97;
-  --color-accent-content: #121416;
-  --color-neutral: #6B7A8C;
-  --color-neutral-content: #E9EEF4;
-  --color-info: #5A9FE8;
-  --color-info-content: #161C24;
-  --color-success: #4FCF97;
-  --color-success-content: #121416;
+  --color-base-100: #221F27;
+  --color-base-200: #19171D;
+  --color-base-300: #2D2933;
+  --color-base-content: #EEEAF2;
+  --color-primary: #EEEAF2;
+  --color-primary-content: #19171D;
+  --color-secondary: #ABA4B4;
+  --color-secondary-content: #19171D;
+  --color-accent: #A893FF;
+  --color-accent-content: #19171D;
+  --color-neutral: #776F80;
+  --color-neutral-content: #EEEAF2;
+  --color-info: #6CA8EE;
+  --color-info-content: #19171D;
+  --color-success: #A893FF;
+  --color-success-content: #19171D;
   --color-warning: #C58F2E;
-  --color-warning-content: #161C24;
+  --color-warning-content: #19171D;
   --color-error: #FF8A8A;
-  --color-error-content: #161C24;
-  --radius-selector: 0.375rem;
-  --radius-field: 0.375rem;
-  --radius-box: 0.625rem;
+  --color-error-content: #19171D;
+  --radius-selector: 2rem;
+  --radius-field: 0.75rem;
+  --radius-box: 1.25rem;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
@@ -92,55 +93,41 @@
 
 /* Tokens DaisyUI has no slot for (DESIGN.md). */
 :root, [data-theme=light] {
-  --fuel-mark: #96E2BF;
-  --fuel-arc-selected: #14805A;
-  --step-number-selected: #96E2BF;
-  --muted: #4A5767;
-  --rule: #D0D8E1;
-  --rule-strong: #A9B4C1;
-  --spine: #7A8697;
+  --fuel-mark: #D9CFFF;
+  --fuel-arc-selected: #5F42D6;
+  --step-number-selected: #D9CFFF;
+  --muted: #5A5560;
+  --rule: #E4E0DA;
+  --rule-strong: #B3ACA4;
+  --spine: #88817B;
   --planet-earth: #2C6DB5;
-  --planet-moon: #717C89;
+  --planet-moon: #7B7570;
   --planet-mars: #B5622B;
   --warn-fg: #7A4600;
   --warn-bg: #FDF0D5;
   --warn-border: #B7791F;
   --warn-icon: #9A5B00;
+  --panel-shadow: 0 1px 2px rgb(31 27 36 / 0.04), 0 18px 40px -20px rgb(31 27 36 / 0.18);
+  --float-shadow: 0 2px 8px rgb(31 27 36 / 0.08), 0 24px 48px -16px rgb(31 27 36 / 0.28);
 }
 
 [data-theme=dark] {
-  --fuel-mark: #215747;
-  --fuel-arc-selected: #4FCF97;
-  --step-number-selected: #4FCF97;
-  --muted: #A1AEBE;
-  --rule: #2F3A47;
-  --rule-strong: #465364;
-  --spine: #768699;
-  --planet-earth: #5A9FE8;
-  --planet-moon: #B4BFCC;
-  --planet-mars: #DE8A4E;
+  --fuel-mark: #3E3172;
+  --fuel-arc-selected: #A893FF;
+  --step-number-selected: #A893FF;
+  --muted: #ABA4B4;
+  --rule: #2E2A34;
+  --rule-strong: #4D4756;
+  --spine: #857D8E;
+  --planet-earth: #6CA8EE;
+  --planet-moon: #C4BECB;
+  --planet-mars: #E08E5A;
   --warn-fg: #F6C76E;
   --warn-bg: #33291A;
   --warn-border: #C58F2E;
   --warn-icon: #F2B544;
-}
-
-@font-face {
-  font-family: "Instrument Sans";
-  font-style: normal;
-  font-weight: 400 700;
-  font-stretch: 75% 100%;
-  font-display: swap;
-  src: url("/fonts/instrument-sans-latin.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Martian Mono";
-  font-style: normal;
-  font-weight: 400 700;
-  font-stretch: 75% 112.5%;
-  font-display: swap;
-  src: url("/fonts/martian-mono-latin.woff2") format("woff2");
+  --panel-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 18px 40px -20px rgb(0 0 0 / 0.65);
+  --float-shadow: 0 2px 8px rgb(0 0 0 / 0.3), 0 24px 48px -16px rgb(0 0 0 / 0.7);
 }
 
 @theme {
@@ -205,6 +192,14 @@
 
 /* Numbers line up and zeros are unambiguous wherever the mono face is used. */
 .font-mono { font-variant-numeric: tabular-nums slashed-zero; }
+
+/* A soft card on the stone page: spacecraft inputs, summary, flight path. */
+@utility surface {
+  border-radius: var(--radius-box);
+  border: 1px solid var(--rule);
+  background-color: var(--color-base-100);
+  box-shadow: var(--panel-shadow);
+}
 
 /* Highlighter band behind a number: the fuel marker (DESIGN.md). */
 .fuel-mark {

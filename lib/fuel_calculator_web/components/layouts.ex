@@ -19,12 +19,13 @@ defmodule FuelCalculatorWeb.Layouts do
       </Layouts.app>
   """
   attr :flash, :map, required: true, doc: "the map of flash messages"
+
   slot :inner_block, required: true
 
   def app(assigns) do
     ~H"""
     <div class="min-h-screen bg-base-200 text-base-content font-sans">
-      <header class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pt-6 sm:px-10">
+      <header class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 pt-8 sm:px-10">
         <a href={~p"/"} class="flex items-center gap-3">
           <svg width="34" height="24" viewBox="0 0 34 24" aria-hidden="true">
             <path d="M2 21 H32" class="stroke-neutral" stroke-width="1.5" />
@@ -45,7 +46,7 @@ defmodule FuelCalculatorWeb.Layouts do
         <.theme_toggle />
       </header>
 
-      <main class="mx-auto max-w-6xl px-4 pb-28 pt-8 sm:px-10 sm:pb-16">
+      <main class="mx-auto max-w-6xl px-4 pb-32 pt-8 sm:px-10">
         {render_slot(@inner_block)}
       </main>
 

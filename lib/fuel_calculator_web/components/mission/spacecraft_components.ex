@@ -25,8 +25,8 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
       <div
         id="mass-field"
         class={[
-          "flex max-w-sm items-stretch rounded-field border bg-base-100",
-          if(@error, do: "border-error", else: "border-neutral")
+          "flex max-w-sm items-stretch rounded-field border bg-base-200 transition-colors focus-within:border-accent focus-within:bg-base-100",
+          if(@error, do: "border-error", else: "border-transparent")
         ]}
       >
         <input
@@ -42,7 +42,7 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
           aria-describedby={@error && "mass-error"}
           class="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 font-mono text-[22px] outline-none"
         />
-        <span class="flex items-center border-l border-rule px-3.5 font-mono text-muted">kg</span>
+        <span class="flex items-center px-4 font-mono text-muted">kg</span>
       </div>
       <.field_error :if={@error} id="mass-error" message={@error} />
     </div>
@@ -150,8 +150,11 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
       phx-value-id={@preset.id}
       aria-pressed={to_string(@active)}
       class={[
-        "btn btn-sm h-9 font-normal",
-        if(@active, do: "btn-outline border-accent", else: "btn-ghost border-neutral")
+        "btn btn-sm h-9 rounded-full font-normal",
+        if(@active,
+          do: "border-accent bg-accent/10 text-base-content",
+          else: "border-rule bg-base-100 text-base-content hover:border-neutral"
+        )
       ]}
     >
       {@preset.name}

@@ -26,9 +26,9 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
     <section
       id="summary"
       aria-labelledby="summary-heading"
-      class="grid grid-cols-2 overflow-hidden rounded-box border border-rule-strong bg-base-100"
+      class="surface grid grid-cols-2 overflow-hidden"
     >
-      <div class="col-span-2 flex min-h-32 flex-col gap-1.5 border-b border-rule px-5 py-4">
+      <div class="col-span-2 flex min-h-36 flex-col gap-2 border-b border-rule px-6 py-5">
         <div class="flex items-center justify-between gap-2">
           <h2 id="summary-heading" class="text-xs font-semibold uppercase tracking-wider text-muted">
             Total fuel required
@@ -142,7 +142,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   defp figure(assigns) do
     ~H"""
     <div class={[
-      "px-5 py-2.5",
+      "px-6 py-3",
       !@last_column && "border-r border-rule",
       !@bottom && "border-b border-rule"
     ]}>
@@ -172,9 +172,9 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
       data-watch="summary"
       role="region"
       aria-label="Mission total"
-      class="fixed inset-x-0 bottom-0 z-20 border-t border-rule-strong bg-base-100 transition-transform duration-300 sm:translate-y-full sm:data-pinned:translate-y-0"
+      class="fixed inset-x-3 bottom-3 z-20 mx-auto max-w-4xl rounded-box border border-rule bg-base-100/95 shadow-[var(--float-shadow)] backdrop-blur transition-transform duration-300 sm:translate-y-[calc(100%+1.5rem)] sm:data-pinned:translate-y-0"
     >
-      <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-10">
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3">
         <span class="text-xs font-semibold uppercase tracking-wider text-muted">Total fuel</span>
         <span :if={@report} class="fuel-mark font-mono text-2xl font-bold">
           <.rolling_number id="pinned-total-fuel" value={@report.total_fuel_kg} /><span class="ml-1.5 text-sm font-normal text-muted">kg</span>

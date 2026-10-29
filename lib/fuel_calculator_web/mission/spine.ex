@@ -33,7 +33,7 @@ defmodule FuelCalculatorWeb.Mission.Spine do
   @min_stroke 2.0
   @max_stroke 11.0
   # Burn ring diameter (px) for the smallest and the largest fuel need.
-  @min_ring 14
+  @min_ring 18
   @max_ring 32
 
   @doc """

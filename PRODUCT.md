@@ -134,7 +134,7 @@ Decided in detail in [`DESIGN.md`](DESIGN.md). In short:
 - **Flight spine layout:** a vertical mission profile beside the editable
   steps. Each launch arc rises and each landing arc descends, and the line
   gets thinner after every burn, showing that earlier steps carry later fuel.
-- **Highlighter style:** numbers stay ink-coloured; one mint marker means fuel
+- **Highlighter style:** numbers stay ink-coloured; one violet marker means fuel
   and appears as a band under the total, bars, burn rings and the selected
   arc.
 - **Light and dark themes that mirror each other**, so switching feels like

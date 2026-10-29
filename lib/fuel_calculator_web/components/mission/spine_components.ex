@@ -88,19 +88,18 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
       "absolute left-[22px] flex -translate-x-1/2 items-center justify-center",
       if(@arc.ring_at == :top, do: "top-[15%] -translate-y-1/2", else: "bottom-[15%] translate-y-1/2")
     ]}>
+      <%!-- Option A ("filled ring"): violet-tinted disc with a solid violet edge,
+           a gap in the card colour around it, and a planet-coloured dot. --%>
       <span
         :if={@arc.ring_size > 0}
         class={[
-          "motion-pop absolute rounded-full border-2 border-accent ring-2 ring-base-200",
+          "motion-pop absolute rounded-full border-2 border-accent ring-[2.5px] ring-base-100",
           "transition-[width,height,background-color] duration-300",
           if(@selected, do: "bg-accent/70", else: "bg-accent/35")
         ]}
         style={"width: #{@arc.ring_size}px; height: #{@arc.ring_size}px"}
       ></span>
-      <span class={[
-        "relative size-3 rounded-full border-2 border-base-100 ring-1 ring-base-content/20",
-        planet_dot(@planet)
-      ]}></span>
+      <span class={["relative size-3 rounded-full border-2 border-base-100", planet_dot(@planet)]}></span>
     </span>
     """
   end
@@ -133,7 +132,10 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
     assigns = assign(assigns, :chain_stagger_ms, @chain_stagger_ms)
 
     ~H"""
-    <div id="fuel-chain" class="flex flex-col gap-1 border-t border-dashed border-rule pt-2.5">
+    <div
+      id="fuel-chain"
+      class="motion-fade mt-1 flex flex-col gap-1.5 rounded-field bg-base-200 p-3.5"
+    >
       <h3 class="text-xs font-semibold uppercase tracking-wider text-muted">
         Fuel chain · the fuel needs fuel too
       </h3>
@@ -167,9 +169,9 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
     ~H"""
     <li class="grid grid-cols-[9rem_minmax(0,1fr)_6rem] items-center gap-2.5 text-xs">
       <span class="text-muted">{@label}</span>
-      <span class="block h-2 overflow-hidden rounded-sm bg-base-300" aria-hidden="true">
+      <span class="block h-2 overflow-hidden rounded-full bg-base-300" aria-hidden="true">
         <span
-          class="motion-grow block h-full min-w-0.5 bg-accent"
+          class="motion-grow block h-full min-w-0.5 rounded-full bg-accent"
           style={"width: #{Float.round(@share * 100, 1)}%; animation-delay: #{@delay_ms}ms"}
         ></span>
       </span>

@@ -31,7 +31,10 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       assign(assigns, count: length(step_ids), arcs: arcs(report), max_fuel: max_fuel(report))
 
     ~H"""
-    <section aria-labelledby="flight-path-heading" class="flex flex-col">
+    <section
+      aria-labelledby="flight-path-heading"
+      class="surface flex flex-col px-3 pb-4 pt-5 sm:px-5"
+    >
       <.path_header has_steps={@count > 0} />
       <ol id="steps" class="flex flex-col">
         <.inputs_for :let={step} field={@field} skip_persistent_id>
@@ -114,7 +117,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
 
   defp empty_path(assigns) do
     ~H"""
-    <div id="no-steps" class="flex flex-col gap-1 border-t border-rule py-6">
+    <div id="no-steps" class="flex flex-col gap-1 border-t border-rule px-2 py-8">
       <span class="font-semibold">No steps yet</span>
       <span class="text-muted">Add a launch to start, or pick a mission above.</span>
     </div>
@@ -138,7 +141,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       id={"step-#{@id}"}
       class={[
         "motion-row-enter flex items-stretch gap-4 border-t border-rule",
-        @selected && "bg-base-100"
+        @selected && "rounded-field border-transparent bg-base-200/60"
       ]}
     >
       <div class="shrink-0 pl-1 pt-4">
@@ -184,13 +187,13 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       phx-value-id={@id}
       aria-pressed={to_string(@selected)}
       class={[
-        "flex size-10 items-center justify-center rounded-full border font-mono text-xs font-semibold",
+        "flex size-10 items-center justify-center rounded-full border font-mono text-xs font-semibold transition-colors",
         if(@selected,
-          do: "border-base-content bg-[var(--step-number-selected)] text-[#121416]",
+          do: "border-transparent bg-[var(--step-number-selected)] text-[#1F1B24]",
           else:
             if(@warned,
               do: "border-2 border-warn-border bg-warn-bg text-warn-fg",
-              else: "border-neutral text-muted hover:border-base-content"
+              else: "border-transparent bg-base-200 text-muted hover:border-neutral"
             )
         )
       ]}
@@ -245,15 +248,14 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   # cast, or the raw string when the submitted value was invalid.
   defp segmented(assigns) do
     ~H"""
-    <fieldset class="flex overflow-hidden rounded-field border border-neutral">
+    <fieldset class="flex gap-0.5 rounded-full bg-base-200 p-1">
       <legend class="sr-only">{@legend}</legend>
       <label
-        :for={{{value, label, planet}, position} <- Enum.with_index(@options)}
+        :for={{value, label, planet} <- @options}
         class={[
-          "flex min-h-10 cursor-pointer items-center gap-1.5 px-3 text-sm font-medium text-muted",
-          "has-checked:bg-base-300 has-checked:text-base-content",
-          "has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-base-content",
-          position > 0 && "border-l border-neutral"
+          "flex min-h-8 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-muted transition-colors hover:text-base-content",
+          "has-checked:bg-base-100 has-checked:text-base-content has-checked:shadow-sm",
+          "has-focus-visible:outline-2 has-focus-visible:outline-offset-1 has-focus-visible:outline-base-content"
         ]}
       >
         <input
@@ -385,7 +387,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       phx-value-id={@id}
       phx-value-direction={@direction}
       disabled={@disabled}
-      class={["btn btn-ghost btn-square btn-sm text-muted disabled:opacity-30", @class]}
+      class={["btn btn-ghost btn-circle btn-sm text-muted disabled:opacity-30", @class]}
     >
       <.icon name={@icon} class="size-4" />
       <span class="sr-only">{render_slot(@inner_block)}</span>
@@ -422,14 +424,14 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     assigns = assign(assigns, :full, assigns.count >= assigns.limit)
 
     ~H"""
-    <div class="flex flex-wrap items-center gap-4 border-t border-rule pt-4">
+    <div class="flex flex-wrap items-center gap-4 border-t border-rule px-2 pt-4">
       <button
         type="button"
         id="add-step"
         phx-click="add_step"
         disabled={@full}
         aria-describedby={@full && "step-limit"}
-        class="btn btn-primary"
+        class="btn btn-primary rounded-full px-5"
       >
         <.icon name="hero-plus" class="size-4" /> Add step
         <span class="font-normal opacity-70">· {Format.step(@next_step)}</span>

@@ -7,16 +7,16 @@ looks, moves and reads.
 
 ## Principles
 
-1. **Colour means data.** The UI chrome is neutral slate. One colour, mint,
+1. **Colour means data.** The UI chrome is neutral warm stone. One colour, violet,
    means fuel and nothing else. Planets have their own dot colours. Status
    colour appears only when something needs attention: amber for path
    warnings, red for errors.
 2. **Numbers stay ink.** Fuel figures are never coloured text. The fuel colour
    appears as marks around them: the highlighter band under the total, bars,
    burn rings, the selected arc.
-3. **One product, dimmed.** The light theme mirrors the dark one: the light
-   page is the dark ink and the light ink is the dark page. Nothing is pure
-   white or pure black.
+3. **One product, dimmed.** The light theme mirrors the dark one. Nothing is
+   pure white or pure black; the page is warm stone and content sits on soft
+   cards.
 4. **Motion explains change.** Animations show what changed and where, last
    120–450 ms, and never loop.
 5. **Errors and warnings differ by more than colour.** Icon, outline style and
@@ -25,103 +25,65 @@ looks, moves and reads.
 ## Themes
 
 Two DaisyUI 5 themes named `light` (default) and `dark` (used when the system
-prefers dark), so Phoenix's theme toggle works unchanged. The Phoenix 1.8 theme toggle offers system / light /
-dark.
+prefers dark), so Phoenix's theme toggle works unchanged. The direction is
+**stone & violet**: a warm stone page, soft rounded cards and pill controls,
+with violet marking fuel. The light theme mirrors the dark one.
 
 ### Tokens
 
 | Token | Light | Dark | Used for |
 |---|---|---|---|
-| Page | `#E9EEF4` | `#161C24` | page background (`base-200`) |
-| Surface | `#F6F8FB` | `#1E2630` | panels, inputs, summary, pinned bar (`base-100`) |
-| Surface 2 | `#DCE3EB` | `#27313D` | selected segment, bar tracks (`base-300`) |
-| Rule | `#D0D8E1` | `#2F3A47` | row dividers |
-| Rule strong | `#A9B4C1` | `#465364` | section rules, spine rails |
-| Control | `#748296` | `#6B7A8C` | input and segment borders, warning outline |
-| Ink | `#161C24` | `#E9EEF4` | text and all numbers, including fuel |
-| Muted | `#4A5767` | `#A1AEBE` | labels, units, secondary text |
-| Fuel fill | `#18915F` | `#4FCF97` | step bars, burn rings, chain bars |
-| Fuel arc (selected) | `#14805A` | `#4FCF97` | arc of the selected step |
-| Fuel mark | `#96E2BF` | `#215747` | solid band behind the total and pinned total |
-| Selected step number | `#96E2BF` fill, `#161C24` border | `#4FCF97` fill and border | number text `#121416` |
-| Spine | `#7A8697` | `#768699` | arcs of unselected steps |
+| Page | `#F1EFEC` | `#19171D` | page background (`base-200`), input and segment tracks |
+| Surface | `#FBFAF8` | `#221F27` | cards, pinned bar (`base-100`) |
+| Surface 2 | `#E6E2DD` | `#2D2933` | bar tracks (`base-300`) |
+| Rule | `#E4E0DA` | `#2E2A34` | card borders, row dividers |
+| Rule strong | `#B3ACA4` | `#4D4756` | spine rails |
+| Control | `#857E78` | `#776F80` | focus outlines and quiet borders (`neutral`) |
+| Ink | `#1F1B24` | `#EEEAF2` | text and all numbers, including fuel |
+| Muted | `#5A5560` | `#ABA4B4` | labels, units, secondary text |
+| Fuel fill | `#7354E8` | `#A893FF` | step bars, burn halos, chain bars (`accent`) |
+| Fuel arc (selected) | `#5F42D6` | `#A893FF` | arc of the selected step |
+| Fuel mark | `#D9CFFF` | `#3E3172` | band behind the total; selected step number |
+| Spine | `#88817B` | `#857D8E` | arcs of unselected steps |
+| Warning text / background / border / icon | `#7A4600` / `#FDF0D5` / `#B7791F` / `#9A5B00` | `#F6C76E` / `#33291A` / `#C58F2E` / `#F2B544` | path warnings |
 | Error | `#B42318` | `#FF8A8A` | error text, x-circle, invalid input border |
-| Warning text | `#7A4600` | `#F6C76E` | path warning text (6.9 / 9.0 on its background) |
-| Warning background | `#FDF0D5` | `#33291A` | path warning box, warned step number, warning badge |
-| Warning border | `#B7791F` | `#C58F2E` | warning outlines, the spine's jump line |
-| Warning icon | `#9A5B00` | `#F2B544` | the warning triangle |
-| Earth | `#2C6DB5` | `#5A9FE8` | planet dot |
-| Moon | `#717C89` | `#B4BFCC` | planet dot |
-| Mars | `#B5622B` | `#DE8A4E` | planet dot |
+| Earth / Moon / Mars | `#2C6DB5` / `#7B7570` / `#B5622B` | `#6CA8EE` / `#C4BECB` / `#E08E5A` | planet rings and dots |
+
+Shadows are tokens too: `--panel-shadow` (soft, for cards) and
+`--float-shadow` (stronger, for the pinned bar and the undo toast).
 
 ### Contrast (WCAG 2.x, measured)
 
 | Pair | Light | Dark | Needed |
 |---|---|---|---|
-| Ink on page | 14.7 | 14.7 | 4.5 |
-| Total (ink) on fuel mark | 11.4 | 7.2 | 7 (our target) |
-| Muted on page / panel | 6.3 / 6.9 | 7.6 / 6.8 | 4.5 |
-| Error on page | 5.6 | 7.6 | 4.5 |
-| Control border on page | 3.4 | 3.9 | 3 |
-| Fuel bars on page | 3.4 | 8.7 | 3 |
-| Inactive arc on page | 3.2 | 4.6 | 3 |
-| Planet dots on page | 3.6–4.5 | 6.2–9.2 | 3 |
+| Ink on page | 14.8 | 15.0 | 4.5 |
+| Total (ink) on fuel mark | 11.5 | 9.4 | 7 (our target) |
+| Muted on page / card | 6.3 / 6.9 | 7.4 / 6.7 | 4.5 |
+| Error on page | 5.7 | 7.8 | 4.5 |
+| Control on page | 3.5 | 3.7 | 3 |
+| Fuel fill on page | 4.4 | 7.0 | 3 |
+| Inactive arc on page | 3.3 | 4.5 | 3 |
+| Planets on page | 3.9–4.6 | 6.9–9.8 | 3 |
+| Warning text on its background | 6.9 | 9.0 | 4.5 |
 
 Any new colour pair must be measured and meet these targets before it ships.
 
 ### DaisyUI 5 mapping
 
-```css
-@plugin "daisyui/theme" {
-  name: "light"; default: true; color-scheme: light;
-  --color-base-100: #F6F8FB;
-  --color-base-200: #E9EEF4;
-  --color-base-300: #DCE3EB;
-  --color-base-content: #161C24;
-  --color-primary: #161C24;   --color-primary-content: #F6F8FB;
-  --color-accent: #18915F;    --color-accent-content: #161C24;
-  --color-neutral: #748296;   --color-neutral-content: #161C24;
-  --color-error: #B42318;     --color-error-content: #F6F8FB;
-  --color-warning: #4A5767;   --color-warning-content: #F6F8FB;
-  --color-info: #2C6DB5;      --color-info-content: #F6F8FB;
-  --color-success: #14805A;   --color-success-content: #F6F8FB;
-  --radius-selector: 0.375rem; --radius-field: 0.375rem; --radius-box: 0.625rem;
-  --size-selector: 0.25rem; --size-field: 0.25rem;
-  --border: 1px; --depth: 0; --noise: 0;
-}
+The theme blocks live in `assets/css/app.css`. Primary is the ink colour (dark
+buttons on light, light buttons on dark), `accent` is the fuel violet,
+`warning` amber and `error` red. Radii: `--radius-box` 1.25rem (cards),
+`--radius-field` 0.75rem (inputs, warning boxes), `--radius-selector` 2rem;
+segmented controls, presets, Add step and the toast are fully rounded pills.
+`--border` 1px, `--depth` 0 (cards get their depth from `--panel-shadow`),
+`--noise` 0.
 
-@plugin "daisyui/theme" {
-  name: "dark"; prefersdark: true; color-scheme: dark;
-  --color-base-100: #1E2630;
-  --color-base-200: #161C24;
-  --color-base-300: #27313D;
-  --color-base-content: #E9EEF4;
-  --color-primary: #E9EEF4;   --color-primary-content: #161C24;
-  --color-accent: #4FCF97;    --color-accent-content: #121416;
-  --color-neutral: #6B7A8C;   --color-neutral-content: #E9EEF4;
-  --color-error: #FF8A8A;     --color-error-content: #161C24;
-  --color-warning: #A1AEBE;   --color-warning-content: #161C24;
-  --color-info: #5A9FE8;      --color-info-content: #161C24;
-  --color-success: #4FCF97;   --color-success-content: #121416;
-  --radius-selector: 0.375rem; --radius-field: 0.375rem; --radius-box: 0.625rem;
-  --size-selector: 0.25rem; --size-field: 0.25rem;
-  --border: 1px; --depth: 0; --noise: 0;
-}
-```
-
-DaisyUI has no slot for these, so they are custom properties defined per theme
-next to the theme blocks: `--fuel-mark`, `--fuel-arc-selected`, `--muted`,
-`--rule`, `--rule-strong`, `--spine`, `--planet-earth`, `--planet-moon`,
-`--planet-mars`.
-
-- Primary buttons are ink-filled (`primary`), not coloured.
 - `accent` is the fuel colour. Never use it for anything that isn't fuel.
-- `success` shares the mint. Use it only for confirmations, and always with
-  an icon and text, so mint keeps meaning fuel.
+- `success` shares the violet. Use it only for confirmations, and always with
+  an icon and text, so violet keeps meaning fuel.
 - `warning` is amber. Path warnings must be noticed without blocking
   anything, so they get a tinted box, a solid triangle and a link from the
-  summary. (They started hue-less while amber still meant fuel; once fuel
-  became mint, the grey dashed box proved too easy to miss.)
+  summary.
 
 ## Typography
 
@@ -163,15 +125,22 @@ Desktop, one column of content, max width about 1240px.
      with the suggested next step.
 4. **How fuel is calculated:** a collapsed disclosure with the formulas and
    gravities.
-5. **Pinned total bar:** sticks to the bottom of the viewport once the summary
+5. **Pinned total bar:** a floating rounded bar at the bottom of the viewport, shown once the summary
    scrolls away.
 
 On phones the spine is hidden (it needs about 200px of width) and each step
 keeps its number and fuel bar. The total and Add step live in a bottom bar,
 and move/remove go into a ⋮ menu.
 
-Shapes: 6px radius for fields and segments, 10px for panels. No shadows
-except the toast. Separate rows with rules rather than nested cards.
+Shapes: three soft cards (spacecraft, summary, flight path) on the stone
+page, 20px corners, soft shadows. Inputs sit on a stone track and turn white
+with a violet border when focused. Choices are pill-shaped segmented
+controls where the selected option is a raised white chip. Inside cards,
+rows are separated by hairlines; the selected row gets a light stone tint.
+Burn markers ("filled ring") look the same in both themes: a violet-tinted
+disc with a solid violet edge (18–32px, sized by fuel; 35% fill, 70% when the
+step is selected), separated from the arc by a gap in the card colour, around
+a planet-coloured dot with a card-coloured border.
 
 ## States
 

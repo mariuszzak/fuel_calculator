@@ -39,19 +39,18 @@ defmodule FuelCalculatorWeb.MissionLive do
         id="mission-form"
         phx-change="validate"
         phx-submit="validate"
-        class="flex flex-col gap-7"
+        class="flex flex-col gap-6"
       >
         <section
           aria-label="Spacecraft and result"
-          class="flex flex-wrap items-stretch gap-x-12 gap-y-6 border-b border-rule-strong pb-7"
+          class="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]"
         >
-          <div class="flex min-w-72 flex-[1_1_420px] flex-col justify-end gap-5">
+          <div class="surface flex flex-col justify-between gap-6 p-6">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-muted">Spacecraft</h2>
             <.mass_field field={@form[:mass]} />
             <.preset_picker presets={@presets} active_id={@preset_id} modified={@modified} />
           </div>
-          <div class="flex-[0_1_500px]">
-            <.summary_panel evaluation={@evaluation} />
-          </div>
+          <.summary_panel evaluation={@evaluation} />
         </section>
 
         <.flight_path
@@ -69,7 +68,7 @@ defmodule FuelCalculatorWeb.MissionLive do
 
   defp formula_note(assigns) do
     ~H"""
-    <details class="border-t border-rule pt-3 text-[13px] text-muted">
+    <details class="px-2 text-[13px] text-muted">
       <summary class="min-h-8 cursor-pointer text-base-content">How fuel is calculated</summary>
       <p class="mt-2 font-mono text-xs leading-loose">
         launch = ⌊m · g · 0.042 − 33⌋ · land = ⌊m · g · 0.033 − 42⌋<br />
