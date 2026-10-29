@@ -50,16 +50,34 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
       <.field_error :if={@error} id="mass-error" message={@error} />
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".MassInput">
-      // Groups the digits with commas as the user types ("28801" -> "28,801"),
-      // keeping the caret after the same digit. Anything that isn't digits and
-      // commas is left as typed so the validation message can explain it.
+      // Digits only. Typing anything else does nothing. A paste is accepted when
+      // it's a whole number once separators, spaces and a "kg" unit are dropped
+      // ("28,801 kg" -> 28801); anything else ("28801.5") is refused rather than
+      // turned into a different number. The digits are grouped with commas as
+      // the user types ("28801" -> "28,801"), keeping the caret after the same
+      // digit. The server still validates every value.
       const group = (digits) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-      const groupable = (value) => /^[\d,]*$/.test(value)
+      const grouped = (value) => /^[\d,]*$/.test(value)
+      const pastedDigits = (text) => text.trim().replace(/\s*kg$/i, "").replace(/[\s,]/g, "")
 
       export default {
         mounted() {
+          this.el.addEventListener("beforeinput", (event) => this.digitsOnly(event))
+          this.el.addEventListener("paste", (event) => this.paste(event))
           this.el.addEventListener("input", () => this.format())
           this.el.addEventListener("keydown", (event) => this.skipSeparator(event))
+        },
+        digitsOnly(event) {
+          const typing = event.inputType === "insertText" || event.inputType === "insertReplacementText"
+          if (typing && event.data && /\D/.test(event.data)) event.preventDefault()
+        },
+        paste(event) {
+          event.preventDefault()
+          const digits = pastedDigits(event.clipboardData?.getData("text") ?? "")
+          if (!/^\d+$/.test(digits)) return
+
+          this.el.setRangeText(digits, this.el.selectionStart, this.el.selectionEnd, "end")
+          this.el.dispatchEvent(new Event("input", {bubbles: true}))
         },
         // Backspace/Delete next to a comma removes the neighbouring digit instead
         // of the comma, which would just be put back.
@@ -72,9 +90,11 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
             this.el.setSelectionRange(start + 1, start + 1)
           }
         },
+        // Values from elsewhere (autofill, drag and drop) that aren't digits are
+        // left as they are, so the server's message explains them.
         format() {
           const {value, selectionStart} = this.el
-          if (!groupable(value)) return
+          if (!grouped(value)) return
 
           const digitsBeforeCaret = value.slice(0, selectionStart).replace(/,/g, "").length
           const formatted = group(value.replace(/,/g, ""))
