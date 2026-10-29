@@ -408,6 +408,22 @@ defmodule FuelCalculatorTest do
   end
 
   describe "presets" do
+    test "give fresh steps ids from the preset and position, the same on every load" do
+      params = FuelCalculator.preset_params(:apollo_11)
+
+      assert step_ids(params) == ["apollo_11-1", "apollo_11-2", "apollo_11-3", "apollo_11-4"]
+      assert FuelCalculator.preset_params(:apollo_11) == params
+    end
+
+    test "are matched however the mass is written" do
+      params = %{FuelCalculator.preset_params(:apollo_11) | "mass" => "28,801"}
+
+      assert FuelCalculator.matches_preset?(params, :apollo_11)
+      refute FuelCalculator.matches_preset?(params, :mars_mission)
+      refute FuelCalculator.matches_preset?(%{params | "mass" => "28802"}, :apollo_11)
+      refute FuelCalculator.matches_preset?(%{params | "mass" => ""}, :apollo_11)
+    end
+
     test "offers the three spec missions" do
       assert Enum.map(FuelCalculator.presets(), & &1.name) ==
                ["Apollo 11", "Mars mission", "Passenger ship"]

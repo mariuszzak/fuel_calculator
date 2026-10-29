@@ -9,6 +9,7 @@ defmodule FuelCalculator do
   evaluated again.
   """
 
+  alias FuelCalculator.Burn
   alias FuelCalculator.Error.FieldError
   alias FuelCalculator.Error.InvalidMission
   alias FuelCalculator.Evaluation
@@ -121,6 +122,21 @@ defmodule FuelCalculator do
   @spec build_mission(params()) :: {:ok, Mission.t()} | {:error, InvalidMission.t()}
   def build_mission(params) when is_map(params) do
     params |> RawParams.normalize() |> MissionParams.changeset() |> MissionParams.to_mission()
+  end
+
+  @doc "The formula for one burn before rounding down, to explain a step that needs no fuel."
+  @spec burn_formula(pos_integer(), FlightStep.t()) :: Burn.t()
+  defdelegate burn_formula(mass_kg, step), to: Fuel, as: :formula
+
+  @doc "Whether the params describe exactly the preset's mission (however the mass is written)."
+  @spec matches_preset?(params(), Preset.id()) :: boolean()
+  def matches_preset?(params, preset_id) when is_map(params) do
+    %Preset{mission: %Mission{} = mission} = Preset.fetch!(preset_id)
+
+    case build_mission(params) do
+      {:ok, %Mission{} = built} -> built == mission
+      {:error, %InvalidMission{}} -> false
+    end
   end
 
   @doc "The fuel needed for a mission, step by step."

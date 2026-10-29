@@ -170,7 +170,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     test "flag a launch from a planet the ship isn't on, keeping the total", %{view: view} do
       assert has_element?(
                view,
-               "#steps > li:nth-child(3) [role=status]",
+               "#steps > li:nth-child(3) div[id^=warning-]",
                "The ship is on Moon, not Mars."
              )
 
@@ -184,7 +184,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       |> render_click()
 
       assert step_rows(view) == 6
-      refute has_element?(view, "[role=status]")
+      refute has_element?(view, "div[id^=warning-]")
     end
 
     test "can be fixed by changing the step", %{view: view} do
@@ -201,9 +201,9 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     test "starts on the first step and shows its fuel chain", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
 
-      assert has_element?(view, "#steps > li:nth-child(1) button[aria-pressed=true]")
-      assert has_element?(view, "#fuel-chain", "fuel for 47,711 kg")
-      assert has_element?(view, "#fuel-chain", "19,618")
+      assert has_element?(view, "#steps > li:nth-child(1) button[aria-expanded=true]")
+      assert has_element?(view, "[id^=fuel-chain]", "fuel for 47,711 kg")
+      assert has_element?(view, "[id^=fuel-chain]", "19,618")
     end
 
     test "shows the chain of the step you pick", %{conn: conn} do
@@ -211,8 +211,8 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
       view |> element("#steps > li:nth-child(4) button[phx-click=select_step]") |> render_click()
 
-      assert has_element?(view, "#steps > li:nth-child(4) #fuel-chain", "9,278")
-      refute has_element?(view, "#steps > li:nth-child(1) #fuel-chain")
+      assert has_element?(view, "#steps > li:nth-child(4) [id^=fuel-chain]", "9,278")
+      refute has_element?(view, "#steps > li:nth-child(1) [id^=fuel-chain]")
     end
 
     test "explains a step that needs no fuel", %{conn: conn} do
@@ -220,7 +220,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
       view |> form("#mission-form", mission: %{mass: "1"}) |> render_change()
 
-      assert has_element?(view, "#fuel-chain", "This step needs no fuel")
+      assert has_element?(view, "[id^=fuel-chain]", "This step needs no fuel")
     end
 
     test "moves to the first step when the selected one is removed", %{conn: conn} do
@@ -229,7 +229,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
       click_step_button(view, 3, "Remove step 3")
 
-      assert has_element?(view, "#steps > li:nth-child(1) button[aria-pressed=true]")
+      assert has_element?(view, "#steps > li:nth-child(1) button[aria-expanded=true]")
     end
 
     test "ignores a selection for a step that doesn't exist", %{conn: conn} do
@@ -237,7 +237,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
       render_click(view, "select_step", %{"id" => "nope"})
 
-      assert has_element?(view, "#steps > li:nth-child(1) button[aria-pressed=true]")
+      assert has_element?(view, "#steps > li:nth-child(1) button[aria-expanded=true]")
     end
   end
 
@@ -357,7 +357,82 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     end
   end
 
+  describe "undo, while the toast is pointed at or focused" do
+    test "waits, then goes away once released", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      view |> element("#clear-path") |> render_click()
+
+      view |> element("#undo-toast") |> render_hook("hold_undo", %{})
+      Process.sleep(100)
+      assert has_element?(view, "#undo-toast")
+
+      view |> element("#undo-toast") |> render_hook("release_undo", %{})
+      Process.sleep(100)
+      refute has_element?(view, "#undo-toast")
+    end
+
+    test "focuses the first step that came back", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      [_first, second | _rest] = row_ids(view)
+      click_step_button(view, 2, "Remove step 2")
+
+      view |> element("#undo-button") |> render_click()
+
+      assert_push_event(view, "focus", %{ids: ["step-number-" <> id, "add-step"]})
+      assert "step-" <> id == second
+    end
+  end
+
+  describe "the preset marker" do
+    test "clears once the mission is edited back to the preset", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      view |> form("#mission-form", mission: %{mass: "14606"}) |> render_change()
+      assert has_element?(view, "#preset-apollo_11", "modified")
+
+      view |> form("#mission-form", mission: %{mass: "28,801"}) |> render_change()
+
+      refute has_element?(view, "#preset-apollo_11", "modified")
+    end
+  end
+
+  describe "a step that needs no fuel" do
+    test "shows the arithmetic behind the zero", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      [first | _rest] = row_ids(view)
+
+      view |> form("#mission-form", mission: %{mass: "1"}) |> render_change()
+
+      assert has_element?(
+               view,
+               "##{first} [id^=no-fuel-]",
+               "1 × 9.807 × 0.042 − 33 = −32.588106"
+             )
+    end
+  end
+
   describe "screen readers" do
+    test "hear how many path warnings there are with the total", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view
+      |> form("#mission-form", mission: %{steps: %{"2" => %{planet: "mars"}}})
+      |> render_change()
+
+      assert has_element?(view, "#total-announcement", "kilograms. 1 path warning.")
+    end
+
+    test "hear why there is no total", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> form("#mission-form", mission: %{mass: ""}) |> render_change()
+
+      assert has_element?(
+               view,
+               "#total-announcement",
+               "Total fuel unavailable. Fix the mass to see the total."
+             )
+    end
+
     test "hear the final total, not the rolling digits", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
 
@@ -415,9 +490,9 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       |> form("#mission-form", mission: %{steps: %{"15" => %{planet: "moon"}}})
       |> render_change()
 
-      assert has_element?(view, "[role=status] button[disabled]", "before")
-      assert has_element?(view, "[role=status]", "There's no room to add 2 more steps.")
-      assert has_element?(view, "[role=status] button:not([disabled])", "Change to")
+      assert has_element?(view, "div[id^=warning-] button[aria-disabled=true]", "before")
+      assert has_element?(view, "div[id^=warning-]", "There's no room to add 2 more steps.")
+      assert has_element?(view, "div[id^=warning-] button:not([aria-disabled])", "Change to")
     end
   end
 
@@ -427,7 +502,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
       click_step_button(view, 2, "Remove step 2")
 
-      assert_push_event(view, "focus", %{id: "undo-button"})
+      assert_push_event(view, "focus", %{ids: ["undo-button"]})
     end
 
     test "follows a moved step, switching buttons at the edge", %{conn: conn} do
@@ -435,12 +510,13 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       [first, second | _rest] = row_ids(view)
 
       click_step_button(view, 1, "Move step 1 down")
-      assert_push_event(view, "focus", %{id: focus_id})
-      assert focus_id == "move-down-" <> String.replace_prefix(first, "step-", "")
+      first_id = String.replace_prefix(first, "step-", "")
+      assert_push_event(view, "focus", %{ids: focus_ids})
+      assert focus_ids == ["move-down-" <> first_id, "step-menu-" <> first_id]
 
       click_step_button(view, 2, "Move step 2 up")
-      assert_push_event(view, "focus", %{id: edge_focus_id})
-      assert edge_focus_id == "move-down-" <> String.replace_prefix(first, "step-", "")
+      assert_push_event(view, "focus", %{ids: edge_focus_ids})
+      assert edge_focus_ids == ["move-down-" <> first_id, "step-menu-" <> first_id]
       assert row_ids(view) |> Enum.take(2) == [first, second]
     end
   end
@@ -475,7 +551,11 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       {:ok, view, _html} = live(conn, ~p"/")
       for _n <- 1..16, do: view |> element("#add-step") |> render_click()
 
-      assert has_element?(view, "#add-step-pinned[disabled][aria-describedby=pinned-step-limit]")
+      assert has_element?(
+               view,
+               "#add-step-pinned[aria-disabled=true][aria-describedby=pinned-step-limit]"
+             )
+
       assert has_element?(view, "#pinned-step-limit", "20 / 20 steps")
       assert has_element?(view, "#step-limit", "A flight path holds up to 20 steps.")
     end

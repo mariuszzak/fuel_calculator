@@ -38,10 +38,12 @@ defmodule FuelCalculatorWeb.Layouts do
             />
             <circle cx="4" cy="21" r="2.6" class="fill-accent" />
           </svg>
-          <span class="flex flex-col">
-            <span class="font-mono text-[15px] font-bold tracking-wider">FUEL/CALC</span>
+          <h1 class="flex flex-col">
+            <span class="font-mono text-[15px] font-bold tracking-wider">
+              <span aria-hidden="true">FUEL/CALC</span><span class="sr-only">Fuel calculator</span>
+            </span>
             <span class="text-[13px] text-muted">Interplanetary launch and landing fuel</span>
-          </span>
+          </h1>
         </a>
         <.theme_toggle />
       </header>
@@ -74,7 +76,7 @@ defmodule FuelCalculatorWeb.Layouts do
       <.flash
         id="client-error"
         kind={:error}
-        title={gettext("We can't find the internet")}
+        title={gettext("Reconnecting")}
         phx-disconnected={
           show(".phx-client-error #client-error")
           |> JS.remove_attribute("hidden", to: ".phx-client-error #client-error")
@@ -82,14 +84,14 @@ defmodule FuelCalculatorWeb.Layouts do
         phx-connected={hide("#client-error") |> JS.set_attribute({"hidden", ""})}
         hidden
       >
-        {gettext("Attempting to reconnect")}
+        {gettext("Values may be out of date.")}
         <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
 
       <.flash
         id="server-error"
         kind={:error}
-        title={gettext("Something went wrong!")}
+        title={gettext("Reconnecting")}
         phx-disconnected={
           show(".phx-server-error #server-error")
           |> JS.remove_attribute("hidden", to: ".phx-server-error #server-error")
@@ -97,7 +99,7 @@ defmodule FuelCalculatorWeb.Layouts do
         phx-connected={hide("#server-error") |> JS.set_attribute({"hidden", ""})}
         hidden
       >
-        {gettext("Attempting to reconnect")}
+        {gettext("Values may be out of date.")}
         <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
       </.flash>
     </div>

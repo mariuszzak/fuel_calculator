@@ -18,9 +18,14 @@ defmodule FuelCalculator.ParamsEditor do
   @type params :: %{optional(String.t()) => term()}
 
   # Reuses the current steps' ids by position, so loading a preset updates the
-  # rows already on screen instead of replacing all of them.
+  # rows already on screen instead of replacing all of them. Extra steps get ids
+  # from the preset and position, so the first page load and the connected
+  # LiveView render the same rows (and don't animate them twice).
   @spec from_preset(Preset.t(), params()) :: params()
-  def from_preset(%Preset{mission: %Mission{mass_kg: mass_kg, steps: steps}}, current)
+  def from_preset(
+        %Preset{id: preset_id, mission: %Mission{mass_kg: mass_kg, steps: steps}},
+        current
+      )
       when is_map(current) do
     current_ids = current |> RawParams.normalize() |> steps() |> Enum.map(&step_id/1)
 
@@ -28,7 +33,7 @@ defmodule FuelCalculator.ParamsEditor do
       steps
       |> Enum.with_index()
       |> Enum.map(fn {%FlightStep{} = step, index} ->
-        reuse_id(step_params(step), Enum.at(current_ids, index))
+        reuse_id(step_params(step), Enum.at(current_ids, index) || "#{preset_id}-#{index + 1}")
       end)
 
     %{"mass" => Integer.to_string(mass_kg), "steps" => preset_steps}
@@ -37,7 +42,6 @@ defmodule FuelCalculator.ParamsEditor do
   defp step_id(%{"id" => id}) when is_binary(id), do: id
 
   defp reuse_id(step, id) when is_binary(id), do: %{step | "id" => id}
-  defp reuse_id(step, nil), do: step
 
   @spec add_step(params(), FlightStep.t()) :: params()
   def add_step(params, %FlightStep{} = step) when is_map(params) do

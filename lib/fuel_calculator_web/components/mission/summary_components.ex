@@ -40,7 +40,10 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
             target_id={first_warning_step_id(@evaluation)}
           />
         </div>
-        <span id="total-announcement" class="sr-only" aria-live="polite">{announcement(@report)}</span>
+        <span id="total-announcement" class="sr-only" aria-live="polite">{announcement(
+          @report,
+          @evaluation
+        )}</span>
         <.total_fuel :if={@report} report={@report} />
         <.no_total :if={!@report} reason={no_total_reason(@evaluation)} />
       </div>
@@ -63,10 +66,17 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
     end
   end
 
-  defp announcement(%FuelReport{total_fuel_kg: total}),
-    do: "Total fuel required: #{Format.number(total)} kilograms"
+  # The one polite live region: the settled total, the reason there is none,
+  # and how many path warnings there are (the warning boxes themselves are silent).
+  defp announcement(%FuelReport{total_fuel_kg: total}, %Evaluation{} = evaluation),
+    do: "Total fuel required: #{Format.number(total)} kilograms." <> warnings_note(evaluation)
 
-  defp announcement(nil), do: "Total fuel unavailable"
+  defp announcement(nil, %Evaluation{} = evaluation),
+    do: "Total fuel unavailable. " <> no_total_reason(evaluation)
+
+  defp warnings_note(%Evaluation{warnings: []}), do: ""
+  defp warnings_note(%Evaluation{warnings: [_one]}), do: " 1 path warning."
+  defp warnings_note(%Evaluation{warnings: warnings}), do: " #{length(warnings)} path warnings."
 
   # A report for an empty path is valid but has nothing to show as a total.
   defp shown_report(%FuelReport{steps: [_ | _]} = report), do: report
@@ -108,7 +118,9 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   defp no_total(assigns) do
     ~H"""
     <div class="motion-fade flex flex-col gap-1">
-      <output id="total-fuel" class="font-mono text-5xl leading-none text-muted">—</output>
+      <span id="total-fuel" class="font-mono text-5xl leading-none text-muted" aria-hidden="true">
+        —
+      </span>
       <span id="no-total-reason" class="text-sm text-muted">{@reason}</span>
     </div>
     """
@@ -126,7 +138,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
       :if={@count > 0}
       id={@id}
       href={@target_id && "#warning-#{@target_id}"}
-      class="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-warn-border bg-warn-bg px-2.5 py-0.5 text-xs font-semibold text-warn-fg hover:underline"
+      class="flex min-h-6 items-center gap-1.5 whitespace-nowrap rounded-full border border-warn-border bg-warn-bg px-2.5 py-0.5 text-xs font-semibold text-warn-fg hover:underline"
     >
       <.icon name="hero-exclamation-triangle-solid" class="size-3.5 text-warn-icon" />
       {@count}
@@ -221,11 +233,11 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
           type="button"
           id="add-step-pinned"
           phx-click="add_step"
-          disabled={@full}
+          aria-disabled={@full && "true"}
           aria-describedby={@full && "pinned-step-limit"}
           aria-label={"Add step: " <> Format.step(@evaluation.next_step)}
           class={[
-            "btn btn-primary btn-sm h-auto min-h-9 min-w-0 shrink whitespace-normal rounded-full px-4 py-1.5 text-left leading-tight sm:hidden",
+            "btn btn-primary btn-sm h-auto min-h-9 min-w-0 shrink whitespace-normal rounded-full px-4 py-1.5 text-left leading-tight aria-disabled:cursor-not-allowed aria-disabled:opacity-50 sm:hidden",
             !@full && "ml-auto"
           ]}
         >
@@ -244,17 +256,30 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
           const summary = document.getElementById(this.el.dataset.watch)
           if (!summary) return
 
-          this.observer = new IntersectionObserver(([entry]) => {
-            if (entry.isIntersecting) {
+          // On phones the bar is always shown; wider screens slide it away while
+          // the summary is visible, and then it must not take focus or be read.
+          const wide = window.matchMedia("(min-width: 640px)")
+          this.update = () => {
+            const hidden = wide.matches && this.summaryVisible
+            if (hidden) {
               this.js().removeAttribute(this.el, "data-pinned")
+              this.js().setAttribute(this.el, "inert", "")
             } else {
               this.js().setAttribute(this.el, "data-pinned", "")
+              this.js().removeAttribute(this.el, "inert")
             }
+          }
+          this.observer = new IntersectionObserver(([entry]) => {
+            this.summaryVisible = entry.isIntersecting
+            this.update()
           })
+          wide.addEventListener("change", this.update)
+          this.wide = wide
           this.observer.observe(summary)
         },
         destroyed() {
           this.observer?.disconnect()
+          this.wide?.removeEventListener("change", this.update)
         }
       }
     </script>

@@ -81,8 +81,20 @@ if (process.env.NODE_ENV === "development") {
   })
 }
 
-// Lets the server move keyboard focus after an edit (e.g. to the moved step's
-// button or the undo button), since the focused element may have moved or gone.
+// Moves keyboard focus after a server-side change, since the focused element
+// may have moved or gone: to the first of `ids` that is visible (desktop
+// buttons are hidden on phones and vice versa). With `from`, only if focus was
+// inside that element, which the patch has usually removed by now, leaving
+// focus on the body.
 window.addEventListener("phx:focus", (event) => {
-  document.getElementById(event.detail.id)?.focus()
+  const {ids, from} = event.detail
+  const active = document.activeElement
+  const focusWasInside =
+    active === document.body || document.getElementById(from)?.contains(active)
+  if (from && !focusWasInside) return
+
+  const target = ids
+    .map((id) => document.getElementById(id))
+    .find((el) => el && el.getClientRects().length > 0)
+  target?.focus()
 })

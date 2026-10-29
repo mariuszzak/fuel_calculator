@@ -3,6 +3,7 @@ defmodule FuelCalculatorWeb.Format do
   Turns domain values into the text the UI shows.
   """
 
+  alias FuelCalculator.Burn
   alias FuelCalculator.FlightStep
   alias FuelCalculator.Planet
 
@@ -10,6 +11,10 @@ defmodule FuelCalculatorWeb.Format do
   @thousands_separator ","
   @ratio_decimals 2
   @step_number_width 2
+  # Gravity and factors are in thousandths, burn results in millionths.
+  @milli_digits 3
+  @micro_digits 6
+  @minus "−"
 
   @doc """
   Formats a whole number with thousands separators.
@@ -46,6 +51,37 @@ defmodule FuelCalculatorWeb.Format do
   @spec ratio(pos_integer(), pos_integer()) :: String.t()
   def ratio(wet_kg, dry_kg) when is_integer(wet_kg) and is_integer(dry_kg) and dry_kg > 0 do
     "×" <> :erlang.float_to_binary(wet_kg / dry_kg, decimals: @ratio_decimals)
+  end
+
+  @doc """
+  The fuel formula for one burn with its exact, unrounded result.
+
+      iex> step = FuelCalculator.FlightStep.new(:land, FuelCalculator.Planet.fetch!(:moon))
+      iex> FuelCalculatorWeb.Format.burn(FuelCalculator.burn_formula(100, step))
+      "100 × 1.62 × 0.033 − 42 = −36.654"
+  """
+  @spec burn(Burn.t()) :: String.t()
+  def burn(%Burn{} = burn) do
+    "#{number(burn.mass_kg)} × #{decimal(burn.gravity_milli, @milli_digits)} × " <>
+      "#{decimal(burn.factor_milli, @milli_digits)} − #{burn.offset_kg} = " <>
+      decimal(burn.result_micro_kg, @micro_digits)
+  end
+
+  # An exact decimal from an integer count of 10^-digits, without trailing zeros.
+  defp decimal(value, digits) when value < 0, do: @minus <> decimal(-value, digits)
+
+  defp decimal(value, digits) when is_integer(value) and value >= 0 do
+    scale = Integer.pow(10, digits)
+    whole = number(div(value, scale))
+
+    case value
+         |> rem(scale)
+         |> Integer.to_string()
+         |> String.pad_leading(digits, "0")
+         |> String.trim_trailing("0") do
+      "" -> whole
+      fraction -> whole <> "." <> fraction
+    end
   end
 
   @doc """

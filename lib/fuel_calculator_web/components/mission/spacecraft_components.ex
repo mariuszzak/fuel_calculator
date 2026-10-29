@@ -27,8 +27,8 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
       <div
         id="mass-field"
         class={[
-          "flex max-w-sm items-stretch rounded-field border bg-base-200 transition-colors focus-within:border-accent focus-within:bg-base-100",
-          if(@error, do: "border-error", else: "border-transparent")
+          "flex max-w-sm items-stretch rounded-field border bg-base-200 transition-colors focus-within:bg-base-100 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-base-content",
+          if(@error, do: "border-error", else: "border-rule-strong focus-within:border-accent")
         ]}
       >
         <input
@@ -41,11 +41,12 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
           autocomplete="off"
           phx-debounce={@debounce_ms}
           aria-invalid={to_string(@error != nil)}
-          aria-describedby={@error && "mass-error"}
+          aria-describedby={if @error, do: "mass-hint mass-error", else: "mass-hint"}
           class="min-w-0 flex-1 bg-transparent px-3.5 py-2.5 font-mono text-[clamp(1.125rem,5.6vw,1.375rem)] outline-none"
         />
-        <span class="flex items-center px-4 font-mono text-muted">kg</span>
+        <span class="flex items-center px-4 font-mono text-muted" aria-hidden="true">kg</span>
       </div>
+      <span id="mass-hint" class="sr-only">In whole kilograms, from 1 to 1,000,000,000.</span>
       <.field_error :if={@error} id="mass-error" message={@error} />
     </div>
     <script :type={Phoenix.LiveView.ColocatedHook} name=".MassInput">

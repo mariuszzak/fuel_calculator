@@ -2,6 +2,7 @@ defmodule FuelCalculator.Fuel do
   # Internal to the domain: the web layer goes through the `FuelCalculator` context.
   @moduledoc false
 
+  alias FuelCalculator.Burn
   alias FuelCalculator.FlightStep
   alias FuelCalculator.FuelReport
   alias FuelCalculator.Mission
@@ -72,6 +73,20 @@ defmodule FuelCalculator.Fuel do
       |> Enum.to_list()
 
     StepFuel.new(step, mass_kg, chain_kg)
+  end
+
+  @doc """
+  The formula for one burn of `mass_kg`, before rounding down.
+
+      iex> alias FuelCalculator.{Fuel, FlightStep, Planet}
+      iex> Fuel.formula(100, FlightStep.new(:land, Planet.fetch!(:moon))).result_micro_kg
+      -36_654_000
+  """
+  @spec formula(pos_integer(), FlightStep.t()) :: Burn.t()
+  def formula(mass_kg, %FlightStep{action: action, planet: %Planet{gravity_milli: gravity_milli}})
+      when is_integer(mass_kg) and mass_kg > 0 do
+    {factor, offset} = Map.fetch!(@formula, action)
+    Burn.new(mass_kg, gravity_milli, factor, offset)
   end
 
   defp burn(mass_kg, %FlightStep{action: action, planet: %Planet{gravity_milli: gravity_milli}}) do

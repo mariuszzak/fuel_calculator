@@ -250,13 +250,30 @@
   from { opacity: 0; transform: translateY(12px); }
 }
 
-.motion-row-enter { animation: motion-slide-in 900ms cubic-bezier(.2, .8, .2, 1) both; }
+/* Slides in over the first 320ms (half), then the highlight fades. */
+.motion-row-enter { animation: motion-slide-in 640ms cubic-bezier(.2, .8, .2, 1) both; }
 .motion-arc-enter { animation: motion-fade-in 420ms cubic-bezier(.6, 0, .2, 1) both; }
 .motion-pop { animation: motion-pop 220ms 300ms cubic-bezier(.2, .8, .2, 1) both; }
 .motion-fade { animation: motion-fade-in 180ms ease-out both; }
 .motion-toast { animation: motion-toast-in 220ms cubic-bezier(.2, .8, .2, 1) both; }
 .motion-grow { transform-origin: left; animation: motion-grow 420ms cubic-bezier(.2, .8, .2, 1) both; }
 .motion-bar { transform-origin: left; transition: transform 320ms cubic-bezier(.2, .8, .2, 1); }
+
+/* While the connection is down the numbers may be stale: dim them (the
+   "Reconnecting" notice says why). LiveView sets these classes on its root. */
+[data-phx-session]:is(.phx-client-error, .phx-server-error) :is(#summary, #steps, #pinned-total) {
+  opacity: 0.5;
+  transition: opacity 200ms;
+}
+
+/* Keeps focused controls clear of the pinned total and the undo toast. */
+html { scroll-padding-bottom: 8rem; }
+
+/* Touch: small buttons and segment options get 44px targets. */
+@media (pointer: coarse) {
+  .btn-sm { --size: 2.75rem; }
+  label:has(> input[type="radio"]) { min-height: 2.75rem; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

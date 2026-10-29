@@ -126,6 +126,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
   The "fuel needs fuel" chain of one step: the fuel for the carried mass, then
   the fuel for that fuel, as shrinking bars, and the step total.
   """
+  attr :id, :string, required: true
   attr :fuel, StepFuel, required: true
 
   def fuel_chain(assigns) do
@@ -133,14 +134,18 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
 
     ~H"""
     <div
-      id="fuel-chain"
+      id={@id}
       class="motion-fade mt-1 flex flex-col gap-1.5 rounded-field bg-base-200 p-3.5"
     >
       <h3 class="text-xs font-semibold uppercase tracking-wider text-muted">
         Fuel chain · the fuel needs fuel too
       </h3>
       <p :if={@fuel.chain_kg == []} class="text-sm text-muted">
-        This step needs no fuel: the formula gives zero or less for {Format.kg(@fuel.carried_mass_kg)}.
+        This step needs no fuel: for {Format.kg(@fuel.carried_mass_kg)} the formula gives
+        <span class="font-mono text-base-content">
+          {Format.burn(FuelCalculator.burn_formula(@fuel.carried_mass_kg, @fuel.step))}
+        </span>
+        kg, zero or less.
       </p>
       <ol :if={@fuel.chain_kg != []} class="flex flex-col gap-1">
         <.chain_link

@@ -25,7 +25,6 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
     ~H"""
     <div
       id={"warning-#{@step_id}"}
-      role="status"
       class="motion-fade flex flex-wrap items-center gap-2.5 rounded-field border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn-fg"
     >
       <.icon name="hero-exclamation-triangle-solid" class="size-5 shrink-0 text-warn-icon" />
@@ -35,7 +34,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
           event="insert_fix"
           step_id={@step_id}
           class="border-warn-border bg-base-100 text-base-content"
-          disabled={!@fits}
+          aria_disabled={!@fits}
           describedby={!@fits && "no-room-#{@step_id}"}
         >
           {insert_label(@warning)}
@@ -55,7 +54,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
   attr :event, :string, required: true
   attr :step_id, :string, required: true
   attr :class, :string, required: true
-  attr :disabled, :boolean, default: false
+  attr :aria_disabled, :boolean, default: false, doc: "stays focusable so its reason is read"
   attr :describedby, :any, default: nil
   slot :inner_block, required: true
 
@@ -65,10 +64,10 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
       type="button"
       phx-click={@event}
       phx-value-id={@step_id}
-      disabled={@disabled}
+      aria-disabled={@aria_disabled && "true"}
       aria-describedby={@describedby}
       class={[
-        "btn btn-sm h-auto min-h-8 max-w-full whitespace-normal rounded-full py-1.5 text-left",
+        "btn btn-sm h-auto min-h-8 max-w-full whitespace-normal rounded-full py-1.5 text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
         @class
       ]}
     >

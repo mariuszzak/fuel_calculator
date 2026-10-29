@@ -21,8 +21,9 @@ defmodule FuelCalculatorWeb.MissionLive do
   alias FuelCalculatorWeb.MissionLive.Undo
 
   @default_preset :apollo_11
-  # How long the undo toast stays; shorter in tests (config/test.exs).
-  @undo_timeout_ms Application.compile_env(:fuel_calculator, :undo_timeout_ms, 6_000)
+  # How long the undo toast stays once nobody is pointing at or focused on it;
+  # shorter in tests (config/test.exs).
+  @undo_timeout_ms Application.compile_env(:fuel_calculator, :undo_timeout_ms, 10_000)
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -88,7 +89,7 @@ defmodule FuelCalculatorWeb.MissionLive do
 
   @impl Phoenix.LiveView
   def handle_event("validate", %{"mission" => params}, socket) when is_map(params) do
-    {:noreply, socket |> assign(modified: true) |> put_params(params)}
+    {:noreply, put_params(socket, params)}
   end
 
   def handle_event("load_preset", %{"id" => id}, socket) do
@@ -115,7 +116,7 @@ defmodule FuelCalculatorWeb.MissionLive do
          socket
          |> remember_for_undo(label)
          |> edit(&FuelCalculator.remove_step(&1, id))
-         |> push_event("focus", %{id: "undo-button"})}
+         |> focus(["undo-button"])}
     end
   end
 
@@ -136,7 +137,10 @@ defmodule FuelCalculatorWeb.MissionLive do
   def handle_event("insert_fix", %{"id" => id}, socket) when is_binary(id) do
     case warning_for(socket.assigns.evaluation, id) do
       %PathWarning{insertion: steps} ->
-        {:noreply, edit(socket, &FuelCalculator.insert_steps_before(&1, id, steps))}
+        {:noreply,
+         socket
+         |> edit(&FuelCalculator.insert_steps_before(&1, id, steps))
+         |> focus(["step-number-" <> id])}
 
       nil ->
         {:noreply, socket}
@@ -146,7 +150,10 @@ defmodule FuelCalculatorWeb.MissionLive do
   def handle_event("replace_fix", %{"id" => id}, socket) when is_binary(id) do
     case warning_for(socket.assigns.evaluation, id) do
       %PathWarning{replacement: step} ->
-        {:noreply, edit(socket, &FuelCalculator.replace_step(&1, id, step))}
+        {:noreply,
+         socket
+         |> edit(&FuelCalculator.replace_step(&1, id, step))
+         |> focus(["step-number-" <> id])}
 
       nil ->
         {:noreply, socket}
@@ -169,20 +176,37 @@ defmodule FuelCalculatorWeb.MissionLive do
          socket
          |> remember_for_undo("Cleared #{count} #{if count == 1, do: "step", else: "steps"}")
          |> edit(&FuelCalculator.clear_steps/1)
-         |> push_event("focus", %{id: "undo-button"})}
+         |> focus(["undo-button"])}
     end
   end
 
   def handle_event("undo", _params, socket) do
     case socket.assigns.undo do
-      %Undo{params: params, preset_id: preset_id, modified: modified} ->
-        {:noreply,
-         socket
-         |> assign(undo: nil, preset_id: preset_id, modified: modified)
-         |> put_params(params)}
+      %Undo{params: params, preset_id: preset_id} ->
+        %Evaluation{step_ids: ids_before} = socket.assigns.evaluation
+        socket = socket |> assign(undo: nil, preset_id: preset_id) |> put_params(params)
+        restored_ids = socket.assigns.evaluation.step_ids -- ids_before
+
+        # Focus the first step that came back; otherwise stay near the path.
+        {:noreply, focus(socket, Enum.map(restored_ids, &("step-number-" <> &1)) ++ ["add-step"])}
 
       nil ->
         {:noreply, socket}
+    end
+  end
+
+  # The toast waits while it's pointed at or focused, then gets a fresh timer.
+  def handle_event("hold_undo", _params, socket) do
+    case socket.assigns.undo do
+      %Undo{} = undo -> {:noreply, assign(socket, undo: Undo.renew(undo))}
+      nil -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("release_undo", _params, socket) do
+    case socket.assigns.undo do
+      %Undo{} = undo -> {:noreply, undo |> Undo.renew() |> start_undo_timer(socket)}
+      nil -> {:noreply, socket}
     end
   end
 
@@ -194,15 +218,28 @@ defmodule FuelCalculatorWeb.MissionLive do
   @impl Phoenix.LiveView
   def handle_info({:expire_undo, ref}, socket) do
     case socket.assigns.undo do
-      %Undo{ref: ^ref} -> {:noreply, assign(socket, undo: nil)}
+      # Focus inside the toast would be lost with it, so it moves to the path.
+      %Undo{ref: ^ref} ->
+        {:noreply, socket |> assign(undo: nil) |> focus(["add-step"], from: "undo-toast")}
+
       # A newer undo replaced this one; its own timer will clear it.
-      %Undo{} -> {:noreply, socket}
-      nil -> {:noreply, socket}
+      %Undo{} ->
+        {:noreply, socket}
+
+      nil ->
+        {:noreply, socket}
     end
   end
 
+  # Asks the browser to focus the first of `ids` that is visible (e.g. a desktop
+  # button or its phone menu). With `from:`, only if focus is inside that element.
+  defp focus(socket, ids, opts \\ []) when is_list(ids) do
+    push_event(socket, "focus", %{ids: ids, from: Keyword.get(opts, :from)})
+  end
+
   # Keyboard focus follows the moved step. At the top or bottom edge the button
-  # that was used is disabled, so focus its opposite instead.
+  # that was used is disabled, so focus its opposite instead. On phones the
+  # buttons are hidden and the step's menu gets focus.
   defp focus_moved_step(socket, id, direction) do
     %Evaluation{step_ids: step_ids} = socket.assigns.evaluation
     index = Enum.find_index(step_ids, &(&1 == id))
@@ -216,12 +253,15 @@ defmodule FuelCalculatorWeb.MissionLive do
         {:down, _index} -> "move-down-"
       end
 
-    push_event(socket, "focus", %{id: button <> id})
+    focus(socket, [button <> id, "step-menu-" <> id])
   end
 
   defp remember_for_undo(socket, label) do
-    %{params: params, preset_id: preset_id, modified: modified} = socket.assigns
-    %Undo{ref: ref} = undo = Undo.new(label, params, preset_id, modified)
+    %{params: params, preset_id: preset_id} = socket.assigns
+    label |> Undo.new(params, preset_id) |> start_undo_timer(socket)
+  end
+
+  defp start_undo_timer(%Undo{ref: ref} = undo, socket) do
     Process.send_after(self(), {:expire_undo, ref}, @undo_timeout_ms)
     assign(socket, undo: undo)
   end
@@ -249,13 +289,11 @@ defmodule FuelCalculatorWeb.MissionLive do
 
   defp load_preset(socket, preset_id) do
     socket
-    |> assign(preset_id: preset_id, modified: false)
+    |> assign(preset_id: preset_id)
     |> put_params(FuelCalculator.preset_params(preset_id, socket.assigns[:params] || %{}))
   end
 
-  defp edit(socket, fun) do
-    socket |> assign(modified: true) |> put_params(fun.(socket.assigns.params))
-  end
+  defp edit(socket, fun), do: put_params(socket, fun.(socket.assigns.params))
 
   # Only the cleaned params from the evaluation are kept (never the raw browser
   # params), so state and undo hold bounded, known data.
@@ -267,6 +305,8 @@ defmodule FuelCalculatorWeb.MissionLive do
       params: clean_params,
       evaluation: evaluation,
       form: to_form(changeset, as: :mission),
+      # Edited back to the preset's exact mission counts as unmodified.
+      modified: not FuelCalculator.matches_preset?(clean_params, socket.assigns.preset_id),
       selected_step_id: keep_selection(socket.assigns[:selected_step_id], step_ids)
     )
   end

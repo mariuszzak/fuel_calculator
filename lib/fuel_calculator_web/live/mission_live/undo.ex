@@ -4,28 +4,24 @@ defmodule FuelCalculatorWeb.MissionLive.Undo do
   and the planner state to restore.
   """
 
-  @enforce_keys [:label, :params, :preset_id, :modified, :ref]
+  @enforce_keys [:label, :params, :preset_id, :ref]
   defstruct @enforce_keys
 
   @type t :: %__MODULE__{
           label: String.t(),
           params: FuelCalculator.params(),
-          preset_id: FuelCalculator.Preset.id() | nil,
-          modified: boolean(),
+          preset_id: FuelCalculator.Preset.id(),
           ref: reference()
         }
 
   @doc "Remembers the state before a change, with a fresh reference for its expiry timer."
-  @spec new(String.t(), FuelCalculator.params(), FuelCalculator.Preset.id() | nil, boolean()) ::
-          t()
-  def new(label, params, preset_id, modified)
-      when is_binary(label) and is_map(params) and is_atom(preset_id) and is_boolean(modified) do
-    %__MODULE__{
-      label: label,
-      params: params,
-      preset_id: preset_id,
-      modified: modified,
-      ref: make_ref()
-    }
+  @spec new(String.t(), FuelCalculator.params(), FuelCalculator.Preset.id()) :: t()
+  def new(label, params, preset_id)
+      when is_binary(label) and is_map(params) and is_atom(preset_id) do
+    %__MODULE__{label: label, params: params, preset_id: preset_id, ref: make_ref()}
   end
+
+  @doc "A new reference, so the timer started for the old one no longer expires it."
+  @spec renew(t()) :: t()
+  def renew(%__MODULE__{} = undo), do: %{undo | ref: make_ref()}
 end
