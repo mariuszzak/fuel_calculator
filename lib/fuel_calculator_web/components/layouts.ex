@@ -73,35 +73,18 @@ defmodule FuelCalculatorWeb.Layouts do
       <.flash kind={:info} flash={@flash} />
       <.flash kind={:error} flash={@flash} />
 
-      <.flash
-        id="client-error"
-        kind={:error}
-        title={gettext("Reconnecting")}
-        phx-disconnected={
-          show(".phx-client-error #client-error")
-          |> JS.remove_attribute("hidden", to: ".phx-client-error #client-error")
-        }
-        phx-connected={hide("#client-error") |> JS.set_attribute({"hidden", ""})}
+      <%!-- Shown while the connection is down (see the dimmed results in app.css). --%>
+      <div
+        id="reconnecting"
+        role="status"
         hidden
+        phx-disconnected={show("#reconnecting") |> JS.remove_attribute("hidden", to: "#reconnecting")}
+        phx-connected={hide("#reconnecting") |> JS.set_attribute({"hidden", ""})}
+        class="fixed inset-x-4 top-3 z-50 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-full bg-base-content px-4 py-2 text-sm text-base-100 shadow-[var(--float-shadow)]"
       >
-        {gettext("Values may be out of date.")}
-        <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
-      </.flash>
-
-      <.flash
-        id="server-error"
-        kind={:error}
-        title={gettext("Reconnecting")}
-        phx-disconnected={
-          show(".phx-server-error #server-error")
-          |> JS.remove_attribute("hidden", to: ".phx-server-error #server-error")
-        }
-        phx-connected={hide("#server-error") |> JS.set_attribute({"hidden", ""})}
-        hidden
-      >
-        {gettext("Values may be out of date.")}
-        <.icon name="hero-arrow-path" class="ml-1 size-3 motion-safe:animate-spin" />
-      </.flash>
+        <.icon name="hero-arrow-path" class="size-4 shrink-0 motion-safe:animate-spin" />
+        {gettext("Reconnecting. Values may be out of date.")}
+      </div>
     </div>
     """
   end
@@ -117,7 +100,7 @@ defmodule FuelCalculatorWeb.Layouts do
       <div class="absolute w-1/3 h-full rounded-full border-1 border-base-200 bg-base-100 brightness-200 left-0 [[data-theme=light]_&]:left-1/3 [[data-theme=dark]_&]:left-2/3 [[data-theme-source=system]_&]:!left-0 transition-[left]" />
 
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        class="touch-target-square flex p-2 cursor-pointer w-1/3 items-center justify-center"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="system"
         aria-label="Use the system theme"
@@ -126,7 +109,7 @@ defmodule FuelCalculatorWeb.Layouts do
       </button>
 
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        class="touch-target-square flex p-2 cursor-pointer w-1/3 items-center justify-center"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="light"
         aria-label="Use the light theme"
@@ -135,7 +118,7 @@ defmodule FuelCalculatorWeb.Layouts do
       </button>
 
       <button
-        class="flex p-2 cursor-pointer w-1/3"
+        class="touch-target-square flex p-2 cursor-pointer w-1/3 items-center justify-center"
         phx-click={JS.dispatch("phx:set-theme")}
         data-phx-theme="dark"
         aria-label="Use the dark theme"

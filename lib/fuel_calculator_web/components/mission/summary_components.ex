@@ -237,9 +237,9 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
         <span
           :if={@full}
           id="pinned-step-limit"
-          class="ml-auto min-w-0 text-right text-xs text-muted sm:hidden"
+          class="ml-auto shrink-0 whitespace-nowrap text-right text-xs text-muted sm:hidden"
         >
-          {@evaluation.step_limit} / {@evaluation.step_limit} steps
+          {@evaluation.step_limit} / {@evaluation.step_limit} steps<span class="sr-only">. A flight path holds up to {@evaluation.step_limit} steps.</span>
         </span>
         <button
           type="button"
@@ -249,14 +249,18 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
           aria-describedby={@full && "pinned-step-limit"}
           aria-label={"Add step: " <> Format.step(@evaluation.next_step)}
           class={[
-            "btn btn-primary btn-sm h-auto min-h-9 min-w-0 shrink whitespace-normal rounded-full px-4 py-1.5 text-left leading-tight aria-disabled:cursor-not-allowed aria-disabled:opacity-50 sm:hidden",
+            "touch-target btn btn-primary btn-sm h-auto min-h-9 min-w-0 shrink whitespace-normal rounded-full px-4 py-1.5 text-left leading-tight aria-disabled:cursor-not-allowed aria-disabled:opacity-50 sm:hidden",
             !@full && "ml-auto"
           ]}
         >
           <.icon name="hero-plus" class="size-4" />
           <%!-- The next step's name doesn't fit beside the total on the narrowest phones. --%>
-          <span class="whitespace-nowrap min-[380px]:hidden">Add step</span>
-          <span class="hidden min-[380px]:inline">{Format.step(@evaluation.next_step)}</span>
+          <%!-- At the limit "20 / 20 steps" beside it says it all, so the button
+               is just the icon (its accessible name and description stay). --%>
+          <span :if={!@full} class="whitespace-nowrap min-[380px]:hidden">Add step</span>
+          <span :if={!@full} class="hidden min-[380px]:inline">
+            {Format.step(@evaluation.next_step)}
+          </span>
         </button>
       </div>
     </div>

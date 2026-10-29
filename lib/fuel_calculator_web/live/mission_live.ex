@@ -72,7 +72,9 @@ defmodule FuelCalculatorWeb.MissionLive do
   defp formula_note(assigns) do
     ~H"""
     <details class="px-2 text-[13px] text-muted">
-      <summary class="min-h-8 cursor-pointer text-base-content">How fuel is calculated</summary>
+      <summary class="touch-target min-h-8 cursor-pointer text-base-content">
+        How fuel is calculated
+      </summary>
       <ul class="mt-2 font-mono text-xs leading-loose">
         <li :for={factors <- FuelCalculator.formula_factors()}>{Format.formula(factors)}</li>
         <li>

@@ -162,7 +162,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
           type="button"
           id="clear-path"
           phx-click="clear_path"
-          class="ml-auto min-h-6 px-1 text-[13px] text-muted underline underline-offset-4"
+          class="touch-target ml-auto min-h-6 px-1 text-[13px] text-muted underline underline-offset-4"
         >
           Clear path
         </button>
@@ -279,7 +279,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       aria-expanded={to_string(@selected)}
       aria-controls={@selected && "fuel-chain-#{@id}"}
       class={[
-        "flex size-10 items-center justify-center rounded-full border font-mono text-xs font-semibold transition-colors",
+        "touch-target-square flex size-10 items-center justify-center rounded-full border font-mono text-xs font-semibold transition-colors",
         if(@selected,
           do: "border-transparent bg-[var(--step-number-selected)] text-accent-content",
           else:
@@ -290,9 +290,8 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         )
       ]}
     >
-      <span class="sr-only">Step</span>
-      {Format.step_number(@index)}
-      <span class="sr-only">, fuel chain{if @warned, do: " (has a path warning)"}</span>
+      <span class="sr-only">Step </span>{Format.step_number(@index)}<span class="sr-only">, fuel chain{if @warned,
+        do: " (has a path warning)"}</span>
     </button>
     """
   end
@@ -353,7 +352,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         class={[
           "flex min-h-9 items-center justify-center rounded-full text-sm font-medium text-muted transition-colors hover:text-base-content sm:min-h-8 sm:gap-1.5 sm:px-3.5",
           if(@stretch, do: "min-w-0 flex-1 gap-1 px-1.5 sm:flex-none", else: "gap-1.5 px-3"),
-          "has-checked:bg-base-100 has-checked:text-base-content has-checked:shadow-sm has-checked:ring-1 has-checked:ring-neutral/70",
+          "has-checked:bg-base-100 has-checked:text-base-content has-checked:shadow-sm has-checked:ring-1 has-checked:ring-neutral",
           "has-focus-visible:outline-2 has-focus-visible:outline-offset-1 has-focus-visible:outline-base-content"
         ]}
       >
@@ -451,7 +450,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       >
         <.icon name="hero-ellipsis-vertical" class="size-5" />
       </summary>
-      <ul class="menu dropdown-content z-10 mt-1 w-48 gap-0.5 rounded-box border border-rule bg-base-100 p-1.5 text-sm shadow-[var(--float-shadow)] [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-base-content">
+      <ul class="menu dropdown-content z-10 mt-1 w-48 gap-0.5 rounded-box border border-rule bg-base-100 p-1.5 text-sm shadow-[var(--float-shadow)] touch-target-items [&_button:focus-visible]:outline-2 [&_button:focus-visible]:outline-solid [&_button:focus-visible]:outline-base-content">
         <li :if={@index > 0}>
           <button
             type="button"
@@ -552,7 +551,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         phx-click="add_step"
         aria-disabled={@full && "true"}
         aria-describedby={@full && "step-limit"}
-        class="btn btn-primary rounded-full px-5 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+        class="touch-target btn btn-primary rounded-full px-5 aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
       >
         <.icon name="hero-plus" class="size-4" /> Add step
         <span class="font-normal opacity-70">· {Format.step(@next_step)}</span>

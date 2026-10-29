@@ -164,7 +164,7 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
       phx-value-id={@preset.id}
       aria-pressed={to_string(@active)}
       class={[
-        "btn btn-sm h-9 rounded-full font-normal",
+        "touch-target btn btn-sm h-9 rounded-full font-normal",
         if(@active,
           do: "border-accent bg-accent/10 text-base-content",
           else: "border-rule bg-base-100 text-base-content hover:border-neutral"

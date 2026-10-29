@@ -139,7 +139,12 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
         Fuel chain · the fuel needs fuel too
       </h3>
       <.no_fuel_needed :if={@fuel.chain_kg == []} id={"#{@id}-no-fuel"} fuel={@fuel} />
-      <ol :if={@fuel.chain_kg != []} class="flex flex-col gap-1">
+      <%!-- One grid for all links (rows use subgrid), so the number column is as
+           wide as the widest number and the bars line up. --%>
+      <ol
+        :if={@fuel.chain_kg != []}
+        class="grid grid-cols-[minmax(0,1fr)_minmax(1.5rem,1fr)_auto] gap-x-2 gap-y-1 sm:grid-cols-[9rem_minmax(0,1fr)_auto] sm:gap-x-2.5"
+      >
         <.chain_link
           :for={{link_kg, position} <- Enum.with_index(@fuel.chain_kg)}
           label={chain_label(position, @fuel)}
@@ -148,10 +153,9 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
           delay_ms={position * @chain_stagger_ms}
         />
       </ol>
-      <p class="grid grid-cols-[minmax(0,1fr)_2rem_5rem] sm:grid-cols-[9rem_minmax(0,1fr)_6rem] gap-2 sm:gap-2.5 border-t border-rule pt-1 text-xs">
+      <p class="flex items-baseline justify-between gap-2 border-t border-rule pt-1 text-xs">
         <span class="text-muted">step total</span>
-        <span></span>
-        <span class="text-right font-mono font-bold">{Format.number(@fuel.fuel_kg)}</span>
+        <span class="font-mono font-bold">{Format.kg(@fuel.fuel_kg)}</span>
       </p>
     </div>
     """
@@ -183,7 +187,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
 
   defp chain_link(assigns) do
     ~H"""
-    <li class="grid grid-cols-[minmax(0,1fr)_2rem_5rem] sm:grid-cols-[9rem_minmax(0,1fr)_6rem] items-center gap-2 sm:gap-2.5 text-xs">
+    <li class="col-span-3 grid grid-cols-subgrid items-center text-xs">
       <span class="text-muted">{@label}</span>
       <span class="block h-2 overflow-hidden rounded-full bg-base-300" aria-hidden="true">
         <span

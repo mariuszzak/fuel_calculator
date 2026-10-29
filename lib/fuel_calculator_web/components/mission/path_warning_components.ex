@@ -68,7 +68,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
       aria-disabled={@aria_disabled && "true"}
       aria-describedby={@describedby}
       class={[
-        "btn btn-sm h-auto min-h-8 max-w-full whitespace-normal rounded-full py-1.5 text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
+        "touch-target btn btn-sm h-auto min-h-8 max-w-full whitespace-normal rounded-full py-1.5 text-left aria-disabled:cursor-not-allowed aria-disabled:opacity-50",
         @class
       ]}
     >

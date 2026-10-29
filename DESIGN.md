@@ -153,7 +153,7 @@ a planet-coloured dot with a card-coloured border.
 | Empty path | "No steps yet" with the three presets; total `—` |
 | Step limit | Add step looks disabled but stays focusable (`aria-disabled`), described by "A flight path holds up to 20 steps." in neutral styling. The same goes for a warning's "Add … before" fix when the steps wouldn't fit |
 | Invalid step or too many steps | x-circle + message on the step ("Choose Earth, Moon or Mars.") or under the path ("A flight path holds up to 20 steps.") |
-| Reconnecting | Notice "Reconnecting. Values may be out of date." and the summary, steps and pinned bar dimmed, driven by LiveView's `.phx-client-error` / `.phx-server-error` classes |
+| Reconnecting | An ink pill at the top, "Reconnecting. Values may be out of date." with a spinning arrow (no close button: it goes away on reconnect). The summary, steps and pinned bar contents are dimmed (the bar itself stays opaque), driven by LiveView's `.phx-client-error` / `.phx-server-error` classes |
 | Undo | Toast after remove, clear or loading a preset over edits, with an Undo button. 10 s, paused while pointed at or focused. Focus moves to Undo after remove or clear, to the restored step after undo, and back to the path if the toast closes while focused |
 
 ## Motion
@@ -196,7 +196,12 @@ shake on error.
 - Icon-only buttons have `aria-label`s. The spine SVG is decorative
   (`aria-hidden`); the rows are the accessible source of truth.
 - Visible focus on every control: a 2px ink outline.
-- Touch targets are at least 44px on touch screens (`pointer: coarse`).
+- Touch targets are at least 44px on touch screens (`pointer: coarse`,
+  via `.touch-target` / `.touch-target-square`). The warning badges are the
+  exception at 24px (the WCAG minimum): each links to a warning that has its
+  own full-size buttons.
+- Every control without its own focus style gets the 2px ink outline, never
+  the browser's default ring.
 - Colours that must be told apart also differ in lightness, not hue alone.
 
 ## Iconography
