@@ -73,11 +73,15 @@ defmodule FuelCalculatorWeb.MissionLive do
     ~H"""
     <details class="px-2 text-[13px] text-muted">
       <summary class="min-h-8 cursor-pointer text-base-content">How fuel is calculated</summary>
-      <p class="mt-2 font-mono text-xs leading-loose">
-        launch = ⌊m · g · 0.042 − 33⌋ · land = ⌊m · g · 0.033 − 42⌋<br />
-        g: Earth 9.807 · Moon 1.62 · Mars 3.711 m/s²<br />
-        repeated on the fuel until it reaches zero; steps are computed last to first,
-        because each one also carries the fuel for the steps after it
+      <ul class="mt-2 font-mono text-xs leading-loose">
+        <li :for={factors <- FuelCalculator.formula_factors()}>{Format.formula(factors)}</li>
+        <li>
+          g: {Enum.map_join(FuelCalculator.planets(), " · ", &"#{&1.name} #{Format.gravity(&1)}")} m/s²
+        </li>
+      </ul>
+      <p class="mt-1 text-xs">
+        Repeated on the fuel until it reaches zero. Steps are computed last to first,
+        because each one also carries the fuel for the steps after it.
       </p>
     </details>
     """
@@ -103,7 +107,8 @@ defmodule FuelCalculatorWeb.MissionLive do
   end
 
   def handle_event("add_step", _params, socket) do
-    {:noreply, edit(socket, &FuelCalculator.add_step/1)}
+    %Evaluation{next_step: %FlightStep{} = next_step} = socket.assigns.evaluation
+    {:noreply, edit(socket, &FuelCalculator.add_step(&1, next_step))}
   end
 
   def handle_event("remove_step", %{"id" => id}, socket) when is_binary(id) do
@@ -174,7 +179,7 @@ defmodule FuelCalculatorWeb.MissionLive do
       count ->
         {:noreply,
          socket
-         |> remember_for_undo("Cleared #{count} #{if count == 1, do: "step", else: "steps"}")
+         |> remember_for_undo("Cleared #{Format.count(count, "step")}")
          |> edit(&FuelCalculator.clear_steps/1)
          |> focus(["undo-button"])}
     end

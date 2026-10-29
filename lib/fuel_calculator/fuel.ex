@@ -19,11 +19,9 @@ defmodule FuelCalculator.Fuel do
   # 0.5, so each link of the fuel chain is at most half the mass it lifts.
   @max_link_product div(@scale, 2)
 
-  # Each link of the fuel chain must be less than half the mass it lifts
-  # (gravity * factor <= 0.5), so the chain ends quickly: fewer than about 45
-  # links even for the heaviest missions. Earth launch, the worst case, is 0.41.
-  # Fail the build if a planet breaks that; with a ratio of 1 or more the chain
-  # would never end.
+  # Fail the build if a planet goes over that limit. Within it the chain ends
+  # quickly: fewer than about 45 links even for the heaviest missions (Earth
+  # launch, the worst case, is 0.41). With a ratio of 1 or more it never would.
   for %Planet{} = planet <- Planet.all(),
       {action, {factor, _offset}} <- @formula,
       planet.gravity_milli * factor > @max_link_product do
@@ -73,6 +71,18 @@ defmodule FuelCalculator.Fuel do
       |> Enum.to_list()
 
     StepFuel.new(step, mass_kg, chain_kg)
+  end
+
+  @doc """
+  Each action's factor (in thousandths) and offset, in the order of
+  `FlightStep.actions/0`: launch = mass × gravity × 0.042 − 33, land = … × 0.033 − 42.
+  """
+  @spec factors() :: [{FlightStep.action(), pos_integer(), pos_integer()}]
+  def factors do
+    for action <- FlightStep.actions() do
+      {factor, offset} = Map.fetch!(@formula, action)
+      {action, factor, offset}
+    end
   end
 
   @doc """

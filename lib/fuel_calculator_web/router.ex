@@ -17,18 +17,9 @@ defmodule FuelCalculatorWeb.Router do
     }
   end
 
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
-
   scope "/", FuelCalculatorWeb do
     pipe_through :browser
 
     live "/", MissionLive
   end
-
-  # Other scopes may use custom stacks.
-  # scope "/api", FuelCalculatorWeb do
-  #   pipe_through :api
-  # end
 end

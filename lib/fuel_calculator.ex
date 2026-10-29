@@ -22,6 +22,7 @@ defmodule FuelCalculator do
   alias FuelCalculator.MissionParams
   alias FuelCalculator.ParamsEditor
   alias FuelCalculator.PathWarning
+  alias FuelCalculator.Planet
   alias FuelCalculator.Preset
   alias FuelCalculator.RawParams
 
@@ -31,6 +32,18 @@ defmodule FuelCalculator do
   @doc "The example missions from the challenge."
   @spec presets() :: [Preset.t()]
   defdelegate presets, to: Preset, as: :all
+
+  @doc "The planets a step can launch from or land on."
+  @spec planets() :: [Planet.t()]
+  defdelegate planets, to: Planet, as: :all
+
+  @doc "The maneuvers a step can be."
+  @spec actions() :: [FlightStep.action()]
+  defdelegate actions, to: FlightStep
+
+  @doc "Each maneuver's factor (in thousandths) and offset in the fuel formula."
+  @spec formula_factors() :: [{FlightStep.action(), pos_integer(), pos_integer()}]
+  defdelegate formula_factors, to: Fuel, as: :factors
 
   @doc """
   Form params for a preset mission. Step ids are taken from `current` by

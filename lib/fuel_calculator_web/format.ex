@@ -54,6 +54,48 @@ defmodule FuelCalculatorWeb.Format do
   end
 
   @doc """
+  A planet's gravity in m/s².
+
+      iex> FuelCalculatorWeb.Format.gravity(FuelCalculator.Planet.fetch!(:moon))
+      "1.62"
+  """
+  @spec gravity(Planet.t()) :: String.t()
+  def gravity(%Planet{gravity_milli: gravity_milli}), do: decimal(gravity_milli, @milli_digits)
+
+  @doc """
+  One maneuver's fuel formula, rounded down.
+
+      iex> FuelCalculatorWeb.Format.formula({:land, 33, 42})
+      "land = ⌊m × g × 0.033 − 42⌋"
+  """
+  @spec formula({FlightStep.action(), pos_integer(), pos_integer()}) :: String.t()
+  def formula({action, factor_milli, offset})
+      when action in [:launch, :land] and is_integer(factor_milli) and is_integer(offset) do
+    "#{action} = ⌊m × g × #{decimal(factor_milli, @milli_digits)} − #{offset}⌋"
+  end
+
+  @doc """
+  A count with its noun, singular or plural.
+
+      iex> FuelCalculatorWeb.Format.count(1, "step")
+      "1 step"
+      iex> FuelCalculatorWeb.Format.count(2, "path warning")
+      "2 path warnings"
+  """
+  @spec count(non_neg_integer(), String.t()) :: String.t()
+  def count(count, noun), do: "#{count} #{noun(count, noun)}"
+
+  @doc """
+  A noun in the singular or plural to go with a count.
+
+      iex> FuelCalculatorWeb.Format.noun(3, "step")
+      "steps"
+  """
+  @spec noun(non_neg_integer(), String.t()) :: String.t()
+  def noun(1, noun) when is_binary(noun), do: noun
+  def noun(count, noun) when is_integer(count) and count >= 0 and is_binary(noun), do: noun <> "s"
+
+  @doc """
   The fuel formula for one burn with its exact, unrounded result.
 
       iex> step = FuelCalculator.FlightStep.new(:land, FuelCalculator.Planet.fetch!(:moon))

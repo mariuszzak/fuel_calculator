@@ -44,7 +44,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
         </.fix_button>
       </span>
       <span :if={!@fits} id={"no-room-#{@step_id}"} class="w-full text-[13px]">
-        There's no room to add {length(@warning.insertion)} more steps. Change this step,
+        There's no room to add {Format.count(length(@warning.insertion), "more step")}. Change this step,
         or remove another step first.
       </span>
     </div>

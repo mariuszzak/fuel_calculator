@@ -75,8 +75,9 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
     do: "Total fuel unavailable. " <> no_total_reason(evaluation)
 
   defp warnings_note(%Evaluation{warnings: []}), do: ""
-  defp warnings_note(%Evaluation{warnings: [_one]}), do: " 1 path warning."
-  defp warnings_note(%Evaluation{warnings: warnings}), do: " #{length(warnings)} path warnings."
+
+  defp warnings_note(%Evaluation{warnings: warnings}),
+    do: " #{Format.count(length(warnings), "path warning")}."
 
   # A report for an empty path is valid but has nothing to show as a total.
   defp shown_report(%FuelReport{steps: [_ | _]} = report), do: report
@@ -143,7 +144,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
       <.icon name="hero-exclamation-triangle-solid" class="size-3.5 text-warn-icon" />
       {@count}
       <span class={@compact && "max-[379px]:sr-only"}>
-        path {if @count == 1, do: "warning", else: "warnings"}
+        {Format.noun(@count, "path warning")}
       </span>
     </a>
     """

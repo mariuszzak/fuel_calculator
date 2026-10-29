@@ -40,7 +40,8 @@
   --color-neutral-content: #1F1B24;
   --color-info: #2C6DB5;
   --color-info-content: #FBFAF8;
-  --color-success: #5F42D6;
+  /* Not used by the app; kept off violet, which means fuel and nothing else. */
+  --color-success: #2E7D4F;
   --color-success-content: #FBFAF8;
   --color-warning: #B7791F;
   --color-warning-content: #1F1B24;
@@ -75,7 +76,7 @@
   --color-neutral-content: #EEEAF2;
   --color-info: #6CA8EE;
   --color-info-content: #19171D;
-  --color-success: #A893FF;
+  --color-success: #6CC08B;
   --color-success-content: #19171D;
   --color-warning: #C58F2E;
   --color-warning-content: #19171D;
@@ -154,7 +155,6 @@
   --color-muted: var(--muted);
   --color-rule: var(--rule);
   --color-rule-strong: var(--rule-strong);
-  --color-fuel-mark: var(--fuel-mark);
   --color-planet-earth: var(--planet-earth);
   --color-planet-moon: var(--planet-moon);
   --color-planet-mars: var(--planet-mars);

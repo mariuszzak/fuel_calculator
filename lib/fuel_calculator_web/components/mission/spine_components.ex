@@ -6,6 +6,8 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
 
   use FuelCalculatorWeb, :html
 
+  import FuelCalculatorWeb.Mission.PlanetComponents
+
   alias FuelCalculator.StepFuel
   alias FuelCalculatorWeb.Format
   alias FuelCalculatorWeb.Mission.Spine
@@ -99,14 +101,10 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
         ]}
         style={"width: #{@arc.ring_size}px; height: #{@arc.ring_size}px"}
       ></span>
-      <span class={["relative size-3 rounded-full border-2 border-base-100", planet_dot(@planet)]}></span>
+      <.planet_dot planet={@planet} class="relative size-3 border-2 border-base-100" />
     </span>
     """
   end
-
-  defp planet_dot(:earth), do: "bg-planet-earth"
-  defp planet_dot(:moon), do: "bg-planet-moon"
-  defp planet_dot(:mars), do: "bg-planet-mars"
 
   @doc "A thin bar showing the step's share of the largest step's fuel."
   attr :share, :float, required: true, doc: "0.0 to 1.0"

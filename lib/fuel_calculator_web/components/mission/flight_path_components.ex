@@ -9,6 +9,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   import FuelCalculatorWeb.Mission.ErrorComponents
   import FuelCalculatorWeb.Mission.NumberComponents
   import FuelCalculatorWeb.Mission.PathWarningComponents
+  import FuelCalculatorWeb.Mission.PlanetComponents
   import FuelCalculatorWeb.Mission.SpineComponents
 
   alias FuelCalculator.Error.FieldError
@@ -215,7 +216,9 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   end
 
   # The planet field holds an atom once cast, or the raw value when invalid.
-  defp planet_id(id) when is_atom(id) and not is_nil(id), do: if(id in Planet.ids(), do: id)
+  defp planet_id(id) when is_atom(id) and not is_nil(id),
+    do: if(Enum.any?(FuelCalculator.planets(), &match?(%Planet{id: ^id}, &1)), do: id)
+
   defp planet_id(id) when is_binary(id) or is_nil(id), do: nil
 
   attr :id, :string, required: true
@@ -235,7 +238,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       class={[
         "flex size-10 items-center justify-center rounded-full border font-mono text-xs font-semibold transition-colors",
         if(@selected,
-          do: "border-transparent bg-[var(--step-number-selected)] text-[#1F1B24]",
+          do: "border-transparent bg-[var(--step-number-selected)] text-accent-content",
           else:
             if(@warned,
               do: "border-2 border-warn-border bg-warn-bg text-warn-fg",
@@ -259,7 +262,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     <.segmented
       field={@field}
       legend={"Maneuver for step #{@index + 1}"}
-      options={for action <- FlightStep.actions(), do: {action, maneuver_label(action), nil}}
+      options={for action <- FuelCalculator.actions(), do: {action, maneuver_label(action), nil}}
       class="order-1 sm:order-none"
     />
     <span class="hidden w-6 text-center text-sm text-muted sm:inline" aria-hidden="true">
@@ -283,7 +286,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     <.segmented
       field={@field}
       legend={"Body for step #{@index + 1}"}
-      options={for %Planet{id: id, name: name} <- Planet.all(), do: {id, name, id}}
+      options={for %Planet{id: id, name: name} <- FuelCalculator.planets(), do: {id, name, id}}
       class="order-3 w-full sm:order-none sm:w-auto"
       stretch
     />
@@ -318,16 +321,12 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
           value={value}
           checked={to_string(@field.value) == Atom.to_string(value)}
         />
-        <span :if={planet} class={["size-3 rounded-full", planet_dot(planet)]} aria-hidden="true"></span>
+        <.planet_dot :if={planet} planet={planet} />
         {label}
       </label>
     </fieldset>
     """
   end
-
-  defp planet_dot(:earth), do: "bg-planet-earth"
-  defp planet_dot(:moon), do: "bg-planet-moon"
-  defp planet_dot(:mars), do: "bg-planet-mars"
 
   attr :id, :string, required: true
   attr :index, :integer, required: true
