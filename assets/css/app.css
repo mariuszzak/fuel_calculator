@@ -220,6 +220,21 @@
 }
 
 /* Highlighter band behind a number: the fuel marker (DESIGN.md). */
+/* The total on one line, as large as fits: at most 3.5rem, otherwise the
+   summary panel's width (minus padding and the "kg" unit) shared by its
+   characters. --chars is set on the element; a Martian Mono digit is 0.7em
+   wide, or 0.62em at the narrower width used for long numbers. */
+.total-figure {
+  --total-unit-room: 6rem;
+  --em-per-char: 0.7;
+  white-space: nowrap;
+  font-size: min(3.5rem, calc((100cqi - var(--total-unit-room)) / (var(--chars) * var(--em-per-char))));
+}
+.total-figure[data-long] {
+  --em-per-char: 0.62;
+  font-stretch: 87%;
+}
+
 .fuel-mark {
   background: linear-gradient(transparent 58%, var(--fuel-mark) 58%, var(--fuel-mark) 92%, transparent 92%);
 }

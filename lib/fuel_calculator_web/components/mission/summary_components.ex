@@ -100,14 +100,24 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
 
   attr :report, FuelReport, required: true
 
+  # Numbers longer than this switch to Martian Mono's narrower width (DESIGN).
+  @long_total_chars 11
+
+  # The total stays on one line: its size follows its length and the panel
+  # width (see `.total-figure` in app.css).
   defp total_fuel(assigns) do
+    chars = assigns.report.total_fuel_kg |> Format.number() |> String.length()
+    assigns = assign(assigns, chars: chars, long: chars > @long_total_chars)
+
     ~H"""
     <p class="motion-fade flex items-baseline gap-2.5">
       <.rolling_number
         id="total-fuel"
         value={@report.total_fuel_kg}
         aria-hidden="true"
-        class="fuel-mark font-mono text-[clamp(1.75rem,11cqi,3.5rem)] font-bold leading-none [overflow-wrap:anywhere]"
+        style={"--chars: #{@chars}"}
+        data-long={@long}
+        class="total-figure fuel-mark font-mono font-bold leading-none"
       />
       <span class="font-mono text-lg text-muted" aria-hidden="true">kg</span>
     </p>
