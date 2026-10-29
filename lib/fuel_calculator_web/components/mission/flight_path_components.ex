@@ -165,11 +165,18 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       )
 
     ~H"""
+    <%!-- Clicking anywhere on the row (outside its own buttons) selects the step,
+         a shortcut for the step number, which stays the keyboard control. --%>
     <li
       id={"step-#{@id}"}
+      phx-click="select_step"
+      phx-value-id={@id}
       class={[
-        "motion-row-enter grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 border-t border-rule pb-4 sm:flex sm:items-stretch sm:gap-4 sm:pb-0",
-        @selected && "rounded-field border-transparent bg-base-200/60"
+        "motion-row-enter grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 border-t border-rule pb-4 transition-colors sm:flex sm:items-stretch sm:gap-4 sm:pb-0",
+        if(@selected,
+          do: "rounded-field border-transparent bg-base-200/60",
+          else: "cursor-pointer hover:bg-base-200/30"
+        )
       ]}
     >
       <div class="shrink-0 pt-4 sm:pl-1">

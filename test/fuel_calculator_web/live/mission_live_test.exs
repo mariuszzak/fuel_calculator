@@ -379,6 +379,15 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       refute has_element?(view, "#fuel-chain-#{@launch_earth}")
     end
 
+    test "opens when you click anywhere on its row", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      click(view, "#step-#{@land_earth}")
+
+      assert has_element?(view, "#step-number-#{@land_earth}[aria-expanded=true]")
+      assert has_element?(view, "#fuel-chain-#{@land_earth}", "9,278")
+    end
+
     test "moves to the first step when the selected one is removed", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
       click(view, "#step-number-#{@launch_moon}")
