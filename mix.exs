@@ -74,9 +74,10 @@ defmodule FuelCalculator.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      # Cooldown exception (3 days): 1.14.0 fixes 12 security advisories, several
-      # on our HTTP/1 and WebSocket path. Move to 1.14.1 once it is 3 days old.
-      {:bandit, "== 1.14.0"},
+      # Cooldown exception: 1.14.0 fixed 12 security advisories, several on our
+      # HTTP/1 and WebSocket path. 1.14.1 (released 2026-10-28) is taken one day
+      # old, approved explicitly, so the CI security audit passes.
+      {:bandit, "== 1.14.1"},
 
       # Form validation only: embedded schemas, no ecto_sql, no database.
       {:ecto, "~> 3.14"},
