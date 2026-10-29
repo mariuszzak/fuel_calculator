@@ -43,7 +43,7 @@ defmodule FuelCalculatorWeb.MissionLive do
       >
         <section
           aria-label="Spacecraft and result"
-          class="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]"
+          class="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)]"
         >
           <div class="surface flex flex-col justify-between gap-5 p-4 sm:gap-6 sm:p-6">
             <h2 class="text-xs font-semibold uppercase tracking-wider text-muted">Spacecraft</h2>
