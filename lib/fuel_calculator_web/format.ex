@@ -158,10 +158,11 @@ defmodule FuelCalculatorWeb.Format do
   end
 
   @doc """
-  A two-digit step number for display, e.g. `"03"`.
+  The two-digit number shown for the step at a 0-based position: the first
+  step is `"01"`.
 
-      iex> FuelCalculatorWeb.Format.step_number(2)
-      "03"
+      iex> FuelCalculatorWeb.Format.step_number(0)
+      "01"
   """
   @spec step_number(non_neg_integer()) :: String.t()
   def step_number(index) when is_integer(index) and index >= 0 do

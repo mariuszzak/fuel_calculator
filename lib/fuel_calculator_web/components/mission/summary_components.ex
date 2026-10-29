@@ -27,7 +27,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
       aria-labelledby="summary-heading"
       class="surface @container grid grid-cols-2 overflow-hidden"
     >
-      <div class="col-span-2 flex min-h-36 flex-col gap-2 border-b border-rule px-4 py-5 sm:px-6">
+      <div class="col-span-2 flex flex-col gap-2 sm:min-h-36 border-b border-rule px-4 py-5 sm:px-6">
         <div class="flex items-center justify-between gap-2">
           <h2 id="summary-heading" class="text-xs font-semibold uppercase tracking-wider text-muted">
             Total fuel required
