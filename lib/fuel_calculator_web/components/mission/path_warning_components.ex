@@ -19,7 +19,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
     <div
       id={"warning-#{@step_id}"}
       role="status"
-      class="ml-13 flex flex-wrap items-center gap-2.5 rounded-field border border-dashed border-neutral px-2.5 py-1.5 text-sm"
+      class="flex flex-wrap items-center gap-2.5 rounded-field border border-dashed border-neutral px-2.5 py-1.5 text-sm"
     >
       <.icon name="hero-exclamation-triangle" class="size-4 shrink-0" />
       <span><b>Check path.</b> <span class="text-muted">{message(@warning)}</span></span>

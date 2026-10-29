@@ -159,8 +159,9 @@ Desktop, one column of content, max width about 1240px.
 5. **Pinned total bar:** sticks to the bottom of the viewport once the summary
    scrolls away.
 
-On phones the spine collapses to a thin rail beside each row. The total and
-Add step live in a bottom bar, and move/remove go into a ⋮ menu.
+On phones the spine is hidden (it needs about 200px of width) and each step
+keeps its number and fuel bar. The total and Add step live in a bottom bar,
+and move/remove go into a ⋮ menu.
 
 Shapes: 6px radius for fields and segments, 10px for panels. No shadows
 except the toast. Separate rows with rules rather than nested cards.

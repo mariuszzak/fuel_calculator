@@ -45,7 +45,7 @@ defmodule FuelCalculatorWeb.Layouts do
         <.theme_toggle />
       </header>
 
-      <main class="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-10">
+      <main class="mx-auto max-w-6xl px-4 pb-28 pt-8 sm:px-10 sm:pb-16">
         {render_slot(@inner_block)}
       </main>
 

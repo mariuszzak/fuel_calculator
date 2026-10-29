@@ -124,4 +124,70 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
     </div>
     """
   end
+
+  @doc """
+  The total pinned to the bottom of the screen. Always shown on phones, where
+  it also holds the Add step button; on wider screens it slides in once the
+  summary panel scrolls out of view.
+  """
+  attr :evaluation, Evaluation, required: true
+
+  def pinned_total(assigns) do
+    %Evaluation{report: report} = assigns.evaluation
+    assigns = assign(assigns, :report, shown_report(report))
+
+    ~H"""
+    <div
+      id="pinned-total"
+      phx-hook=".PinnedTotal"
+      data-watch="summary"
+      role="region"
+      aria-label="Mission total"
+      class="fixed inset-x-0 bottom-0 z-20 border-t border-rule-strong bg-base-100 transition-transform duration-300 sm:translate-y-full sm:data-pinned:translate-y-0"
+    >
+      <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-10">
+        <span class="text-xs font-semibold uppercase tracking-wider text-muted">Total fuel</span>
+        <span :if={@report} class="fuel-mark font-mono text-2xl font-bold">
+          {Format.number(@report.total_fuel_kg)}<span class="ml-1.5 text-sm font-normal text-muted">kg</span>
+        </span>
+        <span :if={!@report} class="font-mono text-2xl text-muted">—</span>
+        <span :if={@report} class="hidden text-[13px] text-muted sm:inline">
+          Wet mass <span class="font-mono text-base-content">{Format.kg(@report.wet_mass_kg)}</span>
+        </span>
+        <span class="hidden text-[13px] text-muted sm:inline">{Format.route(@evaluation.steps)}</span>
+        <button
+          type="button"
+          id="add-step-pinned"
+          phx-click="add_step"
+          disabled={length(@evaluation.step_ids) >= @evaluation.step_limit}
+          class="btn btn-primary btn-sm ml-auto sm:hidden"
+        >
+          <.icon name="hero-plus" class="size-4" /> {Format.step(@evaluation.next_step)}
+        </button>
+      </div>
+    </div>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".PinnedTotal">
+      // Pins the bar once the summary panel scrolls out of view. The attribute is
+      // set through LiveView's JS commands so it survives server re-renders.
+      export default {
+        mounted() {
+          const summary = document.getElementById(this.el.dataset.watch)
+          if (!summary) return
+
+          this.observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+              this.js().removeAttribute(this.el, "data-pinned")
+            } else {
+              this.js().setAttribute(this.el, "data-pinned", "")
+            }
+          })
+          this.observer.observe(summary)
+        },
+        destroyed() {
+          this.observer?.disconnect()
+        }
+      }
+    </script>
+    """
+  end
 end

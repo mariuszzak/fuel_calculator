@@ -19,10 +19,15 @@ defmodule FuelCalculator.Builders do
   @spec step(String.t()) :: FlightStep.t()
   def step(text) do
     [action, planet] = text |> String.trim() |> String.split(" ")
-    # Test input is trusted and the atoms already exist.
+
     FlightStep.new(
-      String.to_existing_atom(action),
-      Planet.fetch!(String.to_existing_atom(planet))
+      lookup(FlightStep.actions(), action),
+      Planet.fetch!(lookup(Planet.ids(), planet))
     )
   end
+
+  # Looks the name up in the domain's own list, so it works before any module
+  # holding the atom has been loaded.
+  defp lookup(atoms, name),
+    do: Enum.find(atoms, &(Atom.to_string(&1) == name)) || raise("unknown #{name}")
 end

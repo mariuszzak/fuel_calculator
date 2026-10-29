@@ -48,9 +48,14 @@ defmodule FuelCalculatorWeb.MissionLive do
           </div>
         </section>
 
-        <.flight_path field={@form[:steps]} evaluation={@evaluation} />
+        <.flight_path
+          field={@form[:steps]}
+          evaluation={@evaluation}
+          selected_step_id={@selected_step_id}
+        />
         <.formula_note />
       </.form>
+      <.pinned_total evaluation={@evaluation} />
     </Layouts.app>
     """
   end
@@ -121,6 +126,12 @@ defmodule FuelCalculatorWeb.MissionLive do
     end
   end
 
+  def handle_event("select_step", %{"id" => id}, socket) when is_binary(id) do
+    if id in socket.assigns.evaluation.step_ids,
+      do: {:noreply, assign(socket, selected_step_id: id)},
+      else: {:noreply, socket}
+  end
+
   def handle_event("clear_path", _params, socket) do
     {:noreply, edit(socket, &FuelCalculator.clear_steps/1)}
   end
@@ -136,8 +147,20 @@ defmodule FuelCalculatorWeb.MissionLive do
   end
 
   defp put_params(socket, params) do
-    %Evaluation{changeset: changeset} = evaluation = FuelCalculator.evaluate(params)
-    assign(socket, params: params, evaluation: evaluation, form: to_form(changeset, as: :mission))
+    %Evaluation{changeset: changeset, step_ids: step_ids} =
+      evaluation = FuelCalculator.evaluate(params)
+
+    assign(socket,
+      params: params,
+      evaluation: evaluation,
+      form: to_form(changeset, as: :mission),
+      selected_step_id: keep_selection(socket.assigns[:selected_step_id], step_ids)
+    )
+  end
+
+  # Keep the selected step while it still exists, otherwise select the first one.
+  defp keep_selection(selected_id, step_ids) do
+    if selected_id in step_ids, do: selected_id, else: List.first(step_ids)
   end
 
   defp preset_id("apollo_11"), do: {:ok, :apollo_11}

@@ -177,4 +177,85 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       assert has_element?(view, "#total-fuel", "51,898")
     end
   end
+
+  describe "the selected step" do
+    test "starts on the first step and shows its fuel chain", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#steps > li:nth-child(1) button[aria-pressed=true]")
+      assert has_element?(view, "#fuel-chain", "fuel for 47,711 kg")
+      assert has_element?(view, "#fuel-chain", "19,618")
+    end
+
+    test "shows the chain of the step you pick", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element("#steps > li:nth-child(4) button[phx-click=select_step]") |> render_click()
+
+      assert has_element?(view, "#steps > li:nth-child(4) #fuel-chain", "9,278")
+      refute has_element?(view, "#steps > li:nth-child(1) #fuel-chain")
+    end
+
+    test "explains a step that needs no fuel", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> form("#mission-form", mission: %{mass: "1"}) |> render_change()
+
+      assert has_element?(view, "#fuel-chain", "This step needs no fuel")
+    end
+
+    test "moves to the first step when the selected one is removed", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      view |> element("#steps > li:nth-child(3) button[phx-click=select_step]") |> render_click()
+
+      click_step_button(view, 3, "Remove step 3")
+
+      assert has_element?(view, "#steps > li:nth-child(1) button[aria-pressed=true]")
+    end
+
+    test "ignores a selection for a step that doesn't exist", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "select_step", %{"id" => "nope"})
+
+      assert has_element?(view, "#steps > li:nth-child(1) button[aria-pressed=true]")
+    end
+  end
+
+  describe "the flight spine" do
+    test "scales each step's fuel bar to the step needing the most fuel", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, ~s{#steps > li:nth-child(1) [style="width: 100.0%"]})
+      refute has_element?(view, ~s{#steps > li:nth-child(2) [style="width: 100.0%"]})
+    end
+
+    test "draws an arc for every step", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      html = render(view)
+
+      assert html |> LazyHTML.from_fragment() |> LazyHTML.query("#steps svg path") |> Enum.count() ==
+               4
+    end
+  end
+
+  describe "on small screens" do
+    test "keeps the total and an Add step button pinned to the bottom", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "#pinned-total", "51,898")
+      view |> element("#add-step-pinned") |> render_click()
+
+      assert step_rows(view) == 5
+    end
+
+    test "offers the step actions in a menu", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> element("#steps > li:nth-child(2) details button", "Remove") |> render_click()
+
+      assert step_rows(view) == 3
+    end
+  end
 end
