@@ -36,8 +36,8 @@ for the three missions).
 - **Exact integer arithmetic.** Gravity is stored in thousandths (Earth 9807,
   Moon 1620, Mars 3711) and the formula uses integer floor division. Floats are
   not good enough: the equipment mass is capped at 10⁹ kg, but the mass a burn
-  carries (ship plus all later fuel) can reach about 4×10¹³ kg, and there
-  floats round wrongly. For 797,164,543 kg and 20 launches from Earth, floats
+  carries (ship plus all later fuel) can reach about 2.4×10¹³ kg (the wet
+  mass about 4.1×10¹³ kg), and there floats round wrongly. For 797,164,543 kg and 20 launches from Earth, floats
   give 1 kg too much. Integers are exact by construction; a test pins that
   case.
 - **Every planet must keep the fuel chain short.** Each link of the chain must
@@ -53,9 +53,10 @@ for the three missions).
 
 - **Mass is whole kilograms, from 1 to 1,000,000,000 kg.** All spec examples
   are whole kilograms, so we keep the input simple and exact. Digits may be
-  grouped in threes with commas, and the field shows them that way once you
-  leave it ("28801" becomes "28,801"), because large masses are hard to read
-  without separators. Surrounding spaces are ignored; signs, decimals,
+  grouped in threes with commas, and the field groups them as you type
+  ("28801" becomes "28,801"), because large masses are hard to read without
+  separators. A value that can't be read is left exactly as typed, next to
+  the message. Surrounding spaces are ignored; signs, decimals,
   exponents ("1e5"), badly grouped separators ("28,80,1") and units are
   rejected with a message that says what to type, e.g. "Use whole kilograms,
   for example 28801 or 28,801." The upper limit covers any real spacecraft (a
@@ -93,7 +94,8 @@ for the three missions).
   The total is still calculated: the formula doesn't depend on continuity,
   and users may want to model a single leg.
 - **Removing a step, clearing the path or loading a preset over edits can be
-  undone** for a few seconds, so these actions need no confirmation dialog.
+  undone** for ten seconds, or longer while the toast is pointed at or
+  focused, so these actions need no confirmation dialog.
 
 ## Results
 
@@ -105,8 +107,8 @@ for the three missions).
   calculation already produces.
 - **Invalid input never shows a number.** While the mass is invalid the total
   shows "—" with the reason, so nobody copies a stale value.
-- **A step that needs no fuel shows the arithmetic**, e.g.
-  "100 × 1.62 × 0.033 − 42 = −36.65", so a 0 doesn't look like a bug.
+- **A step that needs no fuel shows the arithmetic**, exact and unrounded,
+  e.g. "100 × 1.62 × 0.033 − 42 = −36.654", so a 0 doesn't look like a bug.
 - **Numbers use a thousands separator**: `51,898 kg`.
 
 ## First visit
@@ -115,7 +117,8 @@ for the three missions).
   first screen shows what the tool does and that it matches the spec, without
   any typing. "Clear path" starts a mission from scratch.
 - **The three spec missions are one-click presets.** The active preset is
-  highlighted and marked "modified" as soon as the user edits it.
+  highlighted and marked "modified" while the mission differs from it;
+  editing it back (however the mass is written) clears the mark.
 
 ## Live updates
 

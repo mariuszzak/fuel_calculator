@@ -106,7 +106,7 @@ defmodule FuelCalculator.FuelTest do
 
   describe "large missions" do
     test "stays exact where floating-point arithmetic is off by one" do
-      # Carried mass reaches ~4e13 kg here; a float implementation gives ...525.
+      # The first burn carries ~1.9e13 kg here; a float implementation gives ...525.
       heavy = mission(797_164_543, Enum.map_join(1..20, ", ", fn _n -> "launch earth" end))
 
       report = Fuel.for_mission(heavy)

@@ -43,7 +43,8 @@ with violet marking fuel. The light theme mirrors the dark one.
 | Muted | `#5A5560` | `#ABA4B4` | labels, units, secondary text |
 | Fuel fill | `#7354E8` | `#A893FF` | step bars, burn halos, chain bars (`accent`) |
 | Fuel arc (selected) | `#5F42D6` | `#A893FF` | arc of the selected step |
-| Fuel mark | `#D9CFFF` | `#3E3172` | band behind the total; selected step number |
+| Fuel mark | `#D9CFFF` | `#3E3172` | band behind the total |
+| Selected step number | `#D9CFFF` | `#A893FF` | disc of the selected step, with `accent-content` ink |
 | Spine | `#88817B` | `#857D8E` | arcs of unselected steps |
 | Warning text / background / border / icon | `#7A4600` / `#FDF0D5` / `#B7791F` / `#9A5B00` | `#F6C76E` / `#33291A` / `#C58F2E` / `#F2B544` | path warnings |
 | Error | `#B42318` | `#FF8A8A` | error text, x-circle, invalid input border |
@@ -148,11 +149,12 @@ a planet-coloured dot with a card-coloured border.
 |---|---|
 | Validation error | Red border on the field, x-circle + message below it (`aria-describedby`). The total shows `—` with the reason. Shown after the debounce or on blur, never on the first keystroke |
 | Path warning | Amber box with a solid triangle, "Check path." + explanation, and two fix buttons: add the missing steps before this one (primary, e.g. "Add Launch from Moon before") and change this step (secondary, e.g. "Change to Launch from Moon"). The step number and the spine's jump line turn amber, and the summary and pinned bar show a badge linking to the first warning. The total stays |
-| Zero-fuel step | `0 kg` with the arithmetic shown, e.g. `100 × 1.62 × 0.033 − 42 = −36.65` |
+| Zero-fuel step | `0 kg` with the exact arithmetic under the step and in its fuel chain, e.g. `100 × 1.62 × 0.033 − 42 = −36.654` |
 | Empty path | "No steps yet" with the three presets; total `—` |
-| Step limit | Add step disabled with "A flight path holds up to 20 steps." in neutral styling |
-| Reconnecting | Notice "Reconnecting. Values may be out of date." and the summary dimmed, driven by `.phx-disconnected` |
-| Undo | Toast after remove, clear or loading a preset over edits; 6 s, with an Undo button |
+| Step limit | Add step looks disabled but stays focusable (`aria-disabled`), described by "A flight path holds up to 20 steps." in neutral styling. The same goes for a warning's "Add … before" fix when the steps wouldn't fit |
+| Invalid step or too many steps | x-circle + message on the step ("Choose Earth, Moon or Mars.") or under the path ("A flight path holds up to 20 steps.") |
+| Reconnecting | Notice "Reconnecting. Values may be out of date." and the summary, steps and pinned bar dimmed, driven by LiveView's `.phx-client-error` / `.phx-server-error` classes |
+| Undo | Toast after remove, clear or loading a preset over edits, with an Undo button. 10 s, paused while pointed at or focused. Focus moves to Undo after remove or clear, to the restored step after undo, and back to the path if the toast closes while focused |
 
 ## Motion
 
@@ -160,7 +162,7 @@ a planet-coloured dot with a card-coloured border.
 |---|---|---|
 | Total rolls to the new value | total changes | 450 ms ease-out; a small colocated hook; retargets if interrupted; a separate hidden live region announces the final value |
 | Total ↔ `—` | validation error appears or clears | 180 ms fade in |
-| Row enters | add step, a preset with more steps | 320 ms slide and fade. Loading a preset reuses the rows on screen (ids by position), so they update in place instead of re-entering |
+| Row enters | add step, a preset with more steps | 320 ms slide and fade, then a brief highlight fades out. Loading a preset reuses the rows on screen (ids by position), so they update in place instead of re-entering; preset rows get ids from the preset and position, so the first load and the connected page render the same rows and nothing animates twice |
 | Row exits | remove | Removed instantly; the undo toast confirms. An exit fade kept the row in the list for a moment and made the list jump |
 | Arc enters | new step | 420 ms fade in; burn ring pops after 300 ms. (A `stroke-dashoffset` draw-on doesn't combine reliably with the non-scaling strokes the stretched spine needs) |
 | Fuel bars | any recalculation | `transform: scaleX` transition, 320 ms (never animate `width`) |
@@ -178,13 +180,23 @@ shake on error.
 
 ## Accessibility
 
-- Launch/Land and the body choice are real radio groups (segmented look).
-- The step number is a real button with `aria-pressed` and a label ("Step 2:
-  show fuel chain").
+- Launch/Land and the planet choice are real radio groups (segmented look);
+  the chosen option has a neutral ring as well as the raised chip.
+- The step number is a real button that expands the step's fuel chain
+  (`aria-expanded`, `aria-controls`), named "Step 02, fuel chain".
+- One polite live region announces the settled total with the number of path
+  warnings, or why there is no total. Warning boxes are not live regions.
+- Step fuel is labelled for screen readers ("Fuel for step 2:"), and the
+  mass input describes its unit and range.
+- Unavailable actions use `aria-disabled`, so they stay focusable and their
+  reason is read. The pinned bar is `inert` while slid away on wider screens.
+- After an edit removes or moves the focused control, focus moves to the
+  next sensible place (the moved step's button, its phone menu, the fixed
+  step, Undo).
 - Icon-only buttons have `aria-label`s. The spine SVG is decorative
   (`aria-hidden`); the rows are the accessible source of truth.
 - Visible focus on every control: a 2px ink outline.
-- Touch targets are at least 44px on touch screens.
+- Touch targets are at least 44px on touch screens (`pointer: coarse`).
 - Colours that must be told apart also differ in lightness, not hue alone.
 
 ## Iconography

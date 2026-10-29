@@ -285,7 +285,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     ~H"""
     <.segmented
       field={@field}
-      legend={"Body for step #{@index + 1}"}
+      legend={"Planet for step #{@index + 1}"}
       options={for %Planet{id: id, name: name} <- FuelCalculator.planets(), do: {id, name, id}}
       class="order-3 w-full sm:order-none sm:w-auto"
       stretch
