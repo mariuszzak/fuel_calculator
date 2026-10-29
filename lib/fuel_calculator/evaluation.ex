@@ -2,6 +2,8 @@ defmodule FuelCalculator.Evaluation do
   @moduledoc """
   Everything a screen needs to show for the current mission input.
 
+    * `params` - the submitted params after bounding and cleaning; store these
+      (not the raw browser params) and pass them to the editing functions
     * `changeset` - for rendering the form and its field errors
     * `step_ids` - the id of every submitted step, in order
     * `steps` - the steps that are valid on their own (even if the mass isn't)
@@ -19,6 +21,7 @@ defmodule FuelCalculator.Evaluation do
   alias FuelCalculator.PathWarning
 
   @enforce_keys [
+    :params,
     :changeset,
     :step_ids,
     :steps,
@@ -31,6 +34,7 @@ defmodule FuelCalculator.Evaluation do
   defstruct @enforce_keys
 
   @type t :: %__MODULE__{
+          params: FuelCalculator.params(),
           changeset: Ecto.Changeset.t(),
           step_ids: [String.t() | nil],
           steps: [FlightStep.t()],
@@ -43,6 +47,7 @@ defmodule FuelCalculator.Evaluation do
 
   @doc "Builds the evaluation; exactly one of `report` and `error` is set."
   @spec new(
+          FuelCalculator.params(),
           Ecto.Changeset.t(),
           [String.t() | nil],
           [FlightStep.t()],
@@ -52,6 +57,7 @@ defmodule FuelCalculator.Evaluation do
           pos_integer()
         ) :: t()
   def new(
+        params,
         %Ecto.Changeset{} = changeset,
         step_ids,
         steps,
@@ -60,7 +66,8 @@ defmodule FuelCalculator.Evaluation do
         %FlightStep{} = next_step,
         step_limit
       )
-      when is_list(step_ids) and is_list(steps) and is_list(warnings) and is_integer(step_limit) and
+      when is_map(params) and is_list(step_ids) and is_list(steps) and is_list(warnings) and
+             is_integer(step_limit) and
              step_limit > 0 do
     {report, error} =
       case result do
@@ -69,6 +76,7 @@ defmodule FuelCalculator.Evaluation do
       end
 
     %__MODULE__{
+      params: params,
       changeset: changeset,
       step_ids: step_ids,
       steps: steps,

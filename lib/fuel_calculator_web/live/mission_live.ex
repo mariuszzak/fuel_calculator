@@ -184,6 +184,11 @@ defmodule FuelCalculatorWeb.MissionLive do
     end
   end
 
+  # Framework boundary: events come from the browser and may be tampered with.
+  # Anything unknown or malformed (e.g. a missing id) is ignored instead of
+  # crashing the LiveView and losing the user's mission.
+  def handle_event(_unknown_or_malformed_event, _params, socket), do: {:noreply, socket}
+
   @impl Phoenix.LiveView
   def handle_info({:expire_undo, ref}, socket) do
     case socket.assigns.undo do
@@ -251,12 +256,14 @@ defmodule FuelCalculatorWeb.MissionLive do
     socket |> assign(modified: true) |> put_params(fun.(socket.assigns.params))
   end
 
+  # Only the cleaned params from the evaluation are kept (never the raw browser
+  # params), so state and undo hold bounded, known data.
   defp put_params(socket, params) do
-    %Evaluation{changeset: changeset, step_ids: step_ids} =
+    %Evaluation{params: clean_params, changeset: changeset, step_ids: step_ids} =
       evaluation = FuelCalculator.evaluate(params)
 
     assign(socket,
-      params: params,
+      params: clean_params,
       evaluation: evaluation,
       form: to_form(changeset, as: :mission),
       selected_step_id: keep_selection(socket.assigns[:selected_step_id], step_ids)

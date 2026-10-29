@@ -38,3 +38,7 @@ npm-debug.log
 
 # Dialyzer PLTs
 /priv/plts/
+
+# Local environment files (may hold secrets)
+.env
+.env.*

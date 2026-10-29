@@ -154,6 +154,11 @@ Companion documents:
      expects. The context exposes a changeset only for form rendering
      (`Evaluation.changeset` from `FuelCalculator.evaluate/1`); its validating
      API still returns error structs.
+  4. **A final `handle_event/3` catch-all in LiveViews.** Browser events are
+     untrusted; unknown or malformed ones (e.g. a missing id) are ignored
+     instead of crashing the LiveView and losing the user's state.
+  5. **Form params are maps** at the context boundary (`FuelCalculator.params()`),
+     always cleaned by `RawParams.normalize/1` before anything reads them.
 
 ### Validation of external input
 

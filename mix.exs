@@ -119,7 +119,7 @@ defmodule FuelCalculator.MixProject do
       ],
       precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "test"],
       lint: ["format --check-formatted", "compile --warnings-as-errors", "credo --strict"],
-      audit: ["hex.audit", "deps.audit", "sobelow"]
+      audit: ["hex.audit", "deps.audit", "sobelow --exit"]
     ]
   end
 end

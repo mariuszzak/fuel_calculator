@@ -436,4 +436,41 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       assert has_element?(view, "#step-limit", "A flight path holds up to 20 steps.")
     end
   end
+
+  describe "tampered and oversized input" do
+    test "ignores malformed events instead of crashing", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_change(view, "validate", %{"not_mission" => "x"})
+      render_click(view, "remove_step", %{})
+      render_click(view, "move_step", %{"id" => "x"})
+      render_click(view, "load_preset", %{"id" => 42})
+      render_click(view, "no_such_event", %{})
+
+      assert has_element?(view, "#total-fuel", "51,898")
+    end
+
+    test "handles a huge pasted mass quickly and shows a bounded value", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      huge = String.duplicate("9", 1_000_000)
+
+      {microseconds, _html} =
+        :timer.tc(fn ->
+          view |> form("#mission-form", mission: %{mass: huge}) |> render_change()
+        end)
+
+      assert microseconds < 500_000
+      assert has_element?(view, "#mass-error", "Mass must be at most 1,000,000,000 kg.")
+      assert has_element?(view, ~s{#mission_mass[value="#{String.duplicate("9", 32)}"]})
+    end
+
+    test "shows an invalid mass exactly as typed next to its error", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> form("#mission-form", mission: %{mass: "+5"}) |> render_change()
+
+      assert has_element?(view, ~s{#mission_mass[value="+5"]})
+      assert has_element?(view, "#mass-error")
+    end
+  end
 end

@@ -60,6 +60,20 @@ defmodule FuelCalculatorTest do
       assert %Evaluation{report: %FuelReport{total_fuel_kg: 13_447}} = evaluation
     end
 
+    test "ignores leading zeros in the mass" do
+      evaluation = FuelCalculator.evaluate(params("00,028,801", "land earth"))
+
+      assert %Evaluation{report: %FuelReport{total_fuel_kg: 13_447}} = evaluation
+    end
+
+    test "never fails on a tampered step entry that isn't a map" do
+      params = %{"mass" => "1000", "steps" => %{"0" => ["x"], "1" => [[]]}}
+
+      evaluation = FuelCalculator.evaluate(params)
+
+      assert %Evaluation{steps: [], report: %FuelReport{total_fuel_kg: 0}} = evaluation
+    end
+
     test "ignores whitespace around the mass" do
       params = params(" 28801 ", "land earth")
 

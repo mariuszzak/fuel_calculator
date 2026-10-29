@@ -137,11 +137,20 @@ defmodule FuelCalculator.MissionParams do
       not Regex.match?(@mass_format, text) ->
         {:error, "Use whole kilograms, for example 28801 or 28,801."}
 
-      text |> String.replace(",", "") |> byte_size() > @max_mass_digits ->
+      significant_digits(text) |> byte_size() > @max_mass_digits ->
         {:error, "Mass must be at most 1,000,000,000 kg."}
 
       true ->
-        text |> String.replace(",", "") |> String.to_integer() |> check_mass_range()
+        text |> significant_digits() |> String.to_integer() |> check_mass_range()
+    end
+  end
+
+  # Digits without separators or leading zeros ("00,028,801" -> "28801"), so the
+  # length check only counts digits that carry value.
+  defp significant_digits(text) do
+    case text |> String.replace(",", "") |> String.trim_leading("0") do
+      "" -> "0"
+      digits -> digits
     end
   end
 

@@ -33,7 +33,7 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
           type="text"
           id={@field.id}
           name={@field.name}
-          value={display_mass(@field.value)}
+          value={display_mass(@field)}
           phx-hook=".MassInput"
           inputmode="numeric"
           autocomplete="off"
@@ -87,17 +87,20 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
     """
   end
 
-  # A whole number of kilograms is shown with thousands separators; anything
-  # else (half-typed or invalid input) is shown exactly as entered.
-  defp display_mass(value) when is_binary(value) do
-    case Integer.parse(String.replace(value, ",", "")) do
+  # A valid mass is shown with thousands separators. Anything with an error is
+  # shown exactly as entered, so the field and its message agree. (The value is
+  # already bounded by RawParams.)
+  defp display_mass(%Phoenix.HTML.FormField{value: value, errors: []}) when is_binary(value) do
+    digits = String.replace(value, ",", "") |> String.trim()
+
+    case Integer.parse(digits) do
       {kg, ""} when kg >= 0 -> Format.number(kg)
       {_kg, _rest} -> value
       :error -> value
     end
   end
 
-  defp display_mass(nil), do: nil
+  defp display_mass(%Phoenix.HTML.FormField{value: value}), do: value
 
   # Errors appear once the user has touched the field, not on first render.
   defp visible_error(%Phoenix.HTML.FormField{errors: [{message, _opts} | _rest]} = field) do

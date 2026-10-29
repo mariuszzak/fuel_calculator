@@ -19,6 +19,7 @@ defmodule FuelCalculator do
   alias FuelCalculator.MissionParams
   alias FuelCalculator.ParamsEditor
   alias FuelCalculator.Preset
+  alias FuelCalculator.RawParams
 
   # Form params are an external boundary: a string-keyed map in the browser's shape.
   @type params :: %{optional(String.t()) => term()}
@@ -43,6 +44,7 @@ defmodule FuelCalculator do
   """
   @spec evaluate(params()) :: Evaluation.t()
   def evaluate(params) when is_map(params) do
+    params = RawParams.normalize(params)
     changeset = MissionParams.changeset(params)
     steps = MissionParams.valid_steps(changeset)
 
@@ -55,6 +57,7 @@ defmodule FuelCalculator do
     warnings = if MissionParams.steps_valid?(changeset), do: FlightPath.warnings(steps), else: []
 
     Evaluation.new(
+      params,
       Map.put(changeset, :action, :validate),
       MissionParams.step_ids(changeset),
       steps,
@@ -68,7 +71,7 @@ defmodule FuelCalculator do
   @doc "Turns mission params into a validated mission."
   @spec build_mission(params()) :: {:ok, Mission.t()} | {:error, InvalidMission.t()}
   def build_mission(params) when is_map(params) do
-    params |> MissionParams.changeset() |> MissionParams.to_mission()
+    params |> RawParams.normalize() |> MissionParams.changeset() |> MissionParams.to_mission()
   end
 
   @doc "The fuel needed for a mission, step by step."

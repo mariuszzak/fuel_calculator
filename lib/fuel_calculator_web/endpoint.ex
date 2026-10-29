@@ -8,11 +8,22 @@ defmodule FuelCalculatorWeb.Endpoint do
     store: :cookie,
     key: "_fuel_calculator_key",
     signing_salt: "hf+gevEm",
-    same_site: "Lax"
+    same_site: "Lax",
+    # Only over HTTPS in production (config/prod.exs).
+    secure:
+      Application.compile_env(
+        :fuel_calculator,
+        [__MODULE__, :secure_session_cookie],
+        false
+      )
   ]
 
+  # A mission's form is a few hundred bytes; cap WebSocket frames well above
+  # that so a single huge message can't make the server hold or render megabytes.
+  @max_frame_size 64_000
+
   socket "/live", Phoenix.LiveView.Socket,
-    websocket: [connect_info: [session: @session_options]],
+    websocket: [connect_info: [session: @session_options], max_frame_size: @max_frame_size],
     longpoll: [connect_info: [session: @session_options]]
 
   # Serve at "/" the static files from "priv/static" directory.
