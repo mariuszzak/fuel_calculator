@@ -226,9 +226,9 @@ defmodule FuelCalculatorWeb.MissionLive do
   @impl Phoenix.LiveView
   def handle_info({:expire_undo, ref}, socket) do
     case socket.assigns.undo do
-      # Focus inside the toast would be lost with it, so it moves to the path.
+      # If the toast had focus, its hook moves focus to Add step.
       %Undo{ref: ^ref} ->
-        {:noreply, socket |> assign(undo: nil) |> focus(["add-step"], from: "undo-toast")}
+        {:noreply, assign(socket, undo: nil)}
 
       # A newer undo replaced this one; its own timer will clear it.
       %Undo{} ->
@@ -240,10 +240,8 @@ defmodule FuelCalculatorWeb.MissionLive do
   end
 
   # Asks the browser to focus the first of `ids` that is visible (e.g. a desktop
-  # button or its phone menu). With `from:`, only if focus is inside that element.
-  defp focus(socket, ids, opts \\ []) when is_list(ids) do
-    push_event(socket, "focus", %{ids: ids, from: Keyword.get(opts, :from)})
-  end
+  # button or its phone menu).
+  defp focus(socket, ids) when is_list(ids), do: push_event(socket, "focus", %{ids: ids})
 
   # Keyboard focus follows the moved step. At the top or bottom edge the button
   # that was used is disabled, so focus its opposite instead. On phones the

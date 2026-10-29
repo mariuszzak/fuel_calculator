@@ -84,15 +84,9 @@ if (process.env.NODE_ENV === "development") {
 
 // Moves keyboard focus after a server-side change, since the focused element
 // may have moved or gone: to the first of `ids` that is visible (desktop
-// buttons are hidden on phones and vice versa). With `from`, only if focus was
-// inside that element, which the patch has usually removed by now, leaving
-// focus on the body.
+// buttons are hidden on phones and vice versa).
 window.addEventListener("phx:focus", (event) => {
-  const {ids, from} = event.detail
-  const active = document.activeElement
-  const focusWasInside =
-    active === document.body || document.getElementById(from)?.contains(active)
-  if (from && !focusWasInside) return
+  const {ids} = event.detail
 
   const target = ids
     .map((id) => document.getElementById(id))

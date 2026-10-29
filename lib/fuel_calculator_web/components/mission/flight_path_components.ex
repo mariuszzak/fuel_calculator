@@ -71,6 +71,42 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         limit={@evaluation.step_limit}
       />
     </section>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".StepRow">
+      // Selects the step when its row is clicked, but not when the click is on
+      // one of the row's own controls: changing a planet or opening the menu
+      // shouldn't also move the selection (and the open fuel chain with it).
+      const controls = "button, a, input, label, select, textarea, summary, details, [role=status]"
+
+      export default {
+        mounted() {
+          this.el.addEventListener("click", (event) => {
+            if (event.target.closest(controls)) return
+            this.pushEvent("select_step", {id: this.el.dataset.stepId}).catch(() => {})
+          })
+        }
+      }
+    </script>
+    <script :type={Phoenix.LiveView.ColocatedHook} name=".StepMenu">
+      // Closes the phone step menu on Escape (returning focus to its button) and
+      // on a click anywhere outside it.
+      export default {
+        mounted() {
+          this.onKey = (event) => {
+            if (event.key !== "Escape" || !this.el.open) return
+            this.el.open = false
+            this.el.querySelector("summary")?.focus()
+          }
+          this.onClick = (event) => {
+            if (this.el.open && !this.el.contains(event.target)) this.el.open = false
+          }
+          this.el.addEventListener("keydown", this.onKey)
+          document.addEventListener("click", this.onClick)
+        },
+        destroyed() {
+          document.removeEventListener("click", this.onClick)
+        }
+      }
+    </script>
     """
   end
 
@@ -165,12 +201,12 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       )
 
     ~H"""
-    <%!-- Clicking anywhere on the row (outside its own buttons) selects the step,
-         a shortcut for the step number, which stays the keyboard control. --%>
+    <%!-- Clicking the row's empty space or text selects the step (see the
+         .StepRow hook); the step number stays the keyboard control. --%>
     <li
       id={"step-#{@id}"}
-      phx-click="select_step"
-      phx-value-id={@id}
+      phx-hook=".StepRow"
+      data-step-id={@id}
       class={[
         "motion-row-enter grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 border-t border-rule pb-4 transition-colors sm:flex sm:items-stretch sm:gap-4 sm:pb-0",
         if(@selected,
@@ -402,7 +438,12 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   # the remove button away from accidental taps.
   defp step_menu(assigns) do
     ~H"""
-    <details class="dropdown dropdown-end order-2 ml-auto sm:hidden">
+    <details
+      id={"step-menu-panel-#{@id}"}
+      phx-hook=".StepMenu"
+      phx-mounted={JS.ignore_attributes(["open"])}
+      class="dropdown dropdown-end order-2 ml-auto sm:hidden"
+    >
       <summary
         id={"step-menu-#{@id}"}
         class="btn btn-ghost btn-circle btn-sm text-muted"

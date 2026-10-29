@@ -382,7 +382,9 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     test "opens when you click anywhere on its row", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
 
-      click(view, "#step-#{@land_earth}")
+      view
+      |> element("#step-#{@land_earth}")
+      |> render_hook("select_step", %{"id" => @land_earth})
 
       assert has_element?(view, "#step-number-#{@land_earth}[aria-expanded=true]")
       assert has_element?(view, "#fuel-chain-#{@land_earth}", "9,278")
@@ -604,13 +606,13 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     test "waits while pointed at or focused, then goes away once released", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
       click(view, "#clear-path")
-      view |> element("#undo-toast") |> render_hook("hold_undo", %{})
+      view |> element("#undo-region") |> render_hook("hold_undo", %{})
 
       # Longer than the timeout: the toast must still be there.
       Process.sleep(@undo_wait_ms)
       assert has_element?(view, "#undo-toast")
 
-      view |> element("#undo-toast") |> render_hook("release_undo", %{})
+      view |> element("#undo-region") |> render_hook("release_undo", %{})
       eventually(fn -> refute has_element?(view, "#undo-toast") end)
     end
   end
