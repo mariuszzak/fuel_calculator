@@ -4,9 +4,11 @@ defmodule FuelCalculator do
   module and reads the structs it returns.
 
   Mission input arrives as form params (string-keyed maps from the browser).
-  `evaluate/1` validates them and returns everything a screen needs; the
-  `*_step` functions edit the params for the step buttons and their result is
-  evaluated again.
+  `evaluate/1` validates them and returns everything a screen needs. The
+  editing functions (`add_step/2`, `remove_step/2`, `move_step/3`,
+  `replace_step/3`, `insert_steps_before/3`, `clear_steps/1`) change the params
+  for the step buttons, and their result is evaluated again. Presets and
+  reference data (planets, maneuvers, formulas) come from here too.
   """
 
   alias FuelCalculator.Burn
@@ -16,6 +18,7 @@ defmodule FuelCalculator do
   alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FlightPath
   alias FuelCalculator.FlightStep
+  alias FuelCalculator.Formula
   alias FuelCalculator.Fuel
   alias FuelCalculator.FuelReport
   alias FuelCalculator.Mission
@@ -42,8 +45,8 @@ defmodule FuelCalculator do
   defdelegate actions, to: FlightStep
 
   @doc "Each maneuver's factor (in thousandths) and offset in the fuel formula."
-  @spec formula_factors() :: [{FlightStep.action(), pos_integer(), pos_integer()}]
-  defdelegate formula_factors, to: Fuel, as: :factors
+  @spec formulas() :: [Formula.t()]
+  defdelegate formulas, to: Fuel
 
   @doc """
   Form params for a preset mission. Step ids are taken from `current` by
@@ -63,7 +66,8 @@ defmodule FuelCalculator do
   def evaluate(params) when is_map(params) do
     params = RawParams.normalize(params)
     changeset = MissionParams.changeset(params)
-    steps = MissionParams.valid_steps(changeset)
+    steps_by_position = MissionParams.steps_by_position(changeset)
+    steps = Enum.reject(steps_by_position, &is_nil/1)
 
     result =
       case MissionParams.to_mission(changeset) do
@@ -73,49 +77,40 @@ defmodule FuelCalculator do
 
     warnings = if MissionParams.steps_valid?(changeset), do: FlightPath.warnings(steps), else: []
 
+    rows = rows(MissionParams.step_ids(changeset), steps_by_position, result, warnings)
+
     Evaluation.new(
       params,
-      Map.put(changeset, :action, :validate),
+      %{changeset | action: :validate},
+      rows,
       steps,
       result,
-      warnings,
       FlightPath.next_step(steps),
-      MissionParams.step_limit(),
-      rows(
-        MissionParams.step_ids(changeset),
-        MissionParams.steps_by_position(changeset),
-        result,
-        warnings
-      )
+      MissionParams.step_limit()
     )
   end
 
   # One row per submitted step. Fuel exists only when the whole mission is valid
-  # and warnings only when every step is, so in both cases positions line up.
+  # (one per step) and warnings only when every step is, so the step index
+  # identifies the same step in all of them.
   defp rows(step_ids, steps, result, warnings) do
-    fuels =
+    {fuels, step_errors} =
       case result do
-        {:ok, %FuelReport{steps: step_fuels}} -> step_fuels
-        {:error, %InvalidMission{}} -> []
+        {:ok, %FuelReport{steps: step_fuels}} ->
+          {step_fuels, %{}}
+
+        {:error, %InvalidMission{errors: errors}} ->
+          {List.duplicate(nil, length(step_ids)), errors_by_step(errors)}
       end
 
-    step_errors =
-      case result do
-        {:ok, %FuelReport{}} -> %{}
-        {:error, %InvalidMission{errors: errors}} -> errors_by_step(errors)
-      end
+    warnings_by_step =
+      Map.new(warnings, fn %PathWarning{step_index: index} = warning -> {index, warning} end)
 
-    [step_ids, steps]
+    [step_ids, steps, fuels]
     |> Enum.zip()
     |> Enum.with_index()
-    |> Enum.map(fn {{id, step}, index} ->
-      Row.new(
-        id,
-        step,
-        Enum.at(fuels, index),
-        Enum.find(warnings, &match?(%PathWarning{step_index: ^index}, &1)),
-        Map.get(step_errors, index, [])
-      )
+    |> Enum.map(fn {{id, step, fuel}, index} ->
+      Row.new(id, step, fuel, Map.get(warnings_by_step, index), Map.get(step_errors, index, []))
     end)
   end
 
@@ -141,32 +136,20 @@ defmodule FuelCalculator do
   @spec burn_formula(pos_integer(), FlightStep.t()) :: Burn.t()
   defdelegate burn_formula(mass_kg, step), to: Fuel, as: :formula
 
-  @doc "Whether the params describe exactly the preset's mission (however the mass is written)."
-  @spec matches_preset?(params(), Preset.id()) :: boolean()
-  def matches_preset?(params, preset_id) when is_map(params) do
+  @doc "Whether an evaluation is exactly the preset's mission (however the mass was written)."
+  @spec matches_preset?(Evaluation.t(), Preset.id()) :: boolean()
+  def matches_preset?(%Evaluation{report: report}, preset_id) do
     %Preset{mission: %Mission{} = mission} = Preset.fetch!(preset_id)
-
-    case build_mission(params) do
-      {:ok, %Mission{} = built} -> built == mission
-      {:error, %InvalidMission{}} -> false
-    end
+    match?(%FuelReport{mission: ^mission}, report)
   end
 
   @doc "The fuel needed for a mission, step by step."
   @spec fuel_report(Mission.t()) :: FuelReport.t()
   defdelegate fuel_report(mission), to: Fuel, as: :for_mission
 
-  @doc "Appends a step (by default the suggested next step); a full path is left unchanged."
-  @spec add_step(params(), FlightStep.t() | nil) :: params()
-  def add_step(params, step \\ nil)
-
-  def add_step(params, nil) when is_map(params) do
-    %Evaluation{next_step: %FlightStep{} = next_step} = evaluate(params)
-    ParamsEditor.add_step(params, next_step)
-  end
-
-  def add_step(params, %FlightStep{} = step) when is_map(params),
-    do: ParamsEditor.add_step(params, step)
+  @doc "Appends a step (usually the evaluation's `next_step`); a full path is left unchanged."
+  @spec add_step(params(), FlightStep.t()) :: params()
+  defdelegate add_step(params, step), to: ParamsEditor
 
   @doc "Removes the step with the given id; unknown ids leave the params unchanged."
   @spec remove_step(params(), String.t()) :: params()

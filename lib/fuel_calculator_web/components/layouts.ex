@@ -80,7 +80,7 @@ defmodule FuelCalculatorWeb.Layouts do
         hidden
         phx-disconnected={show("#reconnecting") |> JS.remove_attribute("hidden", to: "#reconnecting")}
         phx-connected={hide("#reconnecting") |> JS.set_attribute({"hidden", ""})}
-        class="fixed inset-x-4 top-3 z-50 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-full bg-base-content px-4 py-2 text-sm text-base-100 shadow-[var(--float-shadow)]"
+        class="fixed inset-x-4 top-3 z-50 mx-auto flex max-w-sm items-center justify-center gap-2 rounded-full bg-base-content px-4 py-2 text-sm text-base-100 shadow-float"
       >
         <.icon name="hero-arrow-path" class="size-4 shrink-0 motion-safe:animate-spin" />
         {gettext("Reconnecting. Values may be out of date.")}

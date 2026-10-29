@@ -4,7 +4,7 @@ defmodule FuelCalculatorWeb.Mission.PlanetComponents do
   use FuelCalculatorWeb, :html
 
   @doc "A planet's dot; size and borders come from `class`."
-  attr :planet, :atom, required: true, values: [:earth, :moon, :mars]
+  attr :planet, :atom, required: true
   attr :class, :any, default: "size-3"
 
   def planet_dot(assigns) do

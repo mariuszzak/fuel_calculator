@@ -201,7 +201,7 @@ Loading a preset and undo also just set new params and call `evaluate/1`.
 | `FuelCalculator.Fuel` | The formula, the fuel chain and the backward pass, in exact integers |
 | `FuelCalculator.FlightPath` | Path warnings (two fixes each) and the suggested next step |
 | `FuelCalculator.RawParams` | The one reader of browser params: keeps known keys, bounds lengths and counts, gives every step a unique id |
-| `FuelCalculator.MissionParams` | Clean params → validated `Mission`. Planet and action strings become atoms only here, through `Ecto.Enum` |
+| `FuelCalculator.MissionParams` | Clean params → validated `Mission`. Planet and action strings become atoms here, through `Ecto.Enum`; the LiveView matches preset ids and directions against fixed lists and never creates atoms |
 | `FuelCalculator.ParamsEditor` | Add, move, remove and fix steps in the params |
 | `FuelCalculator.Preset` | The three spec missions, shared by the UI and the acceptance tests |
 | `FuelCalculatorWeb.MissionLive` | The only page (`/`): keeps the form params, handles events, undo and focus, renders components |

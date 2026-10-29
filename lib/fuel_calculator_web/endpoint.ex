@@ -24,7 +24,9 @@ defmodule FuelCalculatorWeb.Endpoint do
 
   socket "/live", Phoenix.LiveView.Socket,
     websocket: [connect_info: [session: @session_options], max_frame_size: @max_frame_size],
-    longpoll: [connect_info: [session: @session_options]]
+    # No long-polling fallback: its request bodies aren't covered by
+    # max_frame_size, and every browser we target has WebSockets.
+    longpoll: false
 
   # Serve at "/" the static files from "priv/static" directory.
   #

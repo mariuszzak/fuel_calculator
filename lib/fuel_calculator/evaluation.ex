@@ -5,16 +5,17 @@ defmodule FuelCalculator.Evaluation do
     * `params` - the submitted params after bounding and cleaning; store these
       (not the raw browser params) and pass them to the editing functions
     * `changeset` - for rendering the form and its field errors
-    * `step_ids` - the id of every submitted step, in order
-    * `steps` - the steps that are valid on their own (even if the mass isn't)
+    * `rows` - one `Row` per submitted step, in order, with its id, step,
+      fuel, path warning and errors; render steps from these
+    * `steps` - the steps that are valid on their own (even if the mass isn't),
+      for the route
     * `report` - the fuel report, or `nil` while the input is invalid
     * `error` - why there is no report, or `nil` when there is one
-    * `warnings` - path continuity warnings; empty while any step is invalid, so a
-      warning's `step_index` always matches the same position in `step_ids`
     * `next_step` - the suggested next step for "Add step"
     * `step_limit` - the most steps a flight path may hold
-    * `rows` - one `Row` per submitted step with its step, fuel, warning and
-      errors; render steps from these instead of matching lists by position
+
+  Step ids, warnings and the room left are read from the rows with the
+  functions below, so there is one source for each.
   """
 
   alias FuelCalculator.Error.InvalidMission
@@ -23,57 +24,41 @@ defmodule FuelCalculator.Evaluation do
   alias FuelCalculator.FuelReport
   alias FuelCalculator.PathWarning
 
-  @enforce_keys [
-    :params,
-    :changeset,
-    :step_ids,
-    :steps,
-    :report,
-    :error,
-    :warnings,
-    :next_step,
-    :step_limit,
-    :rows
-  ]
+  @enforce_keys [:params, :changeset, :rows, :steps, :report, :error, :next_step, :step_limit]
   defstruct @enforce_keys
 
   @type t :: %__MODULE__{
           params: FuelCalculator.params(),
           changeset: Ecto.Changeset.t(),
-          step_ids: [String.t()],
+          rows: [Row.t()],
           steps: [FlightStep.t()],
           report: FuelReport.t() | nil,
           error: InvalidMission.t() | nil,
-          warnings: [PathWarning.t()],
           next_step: FlightStep.t(),
-          step_limit: pos_integer(),
-          rows: [Row.t()]
+          step_limit: pos_integer()
         }
 
   @doc "Builds the evaluation; exactly one of `report` and `error` is set."
   @spec new(
           FuelCalculator.params(),
           Ecto.Changeset.t(),
+          [Row.t()],
           [FlightStep.t()],
           {:ok, FuelReport.t()} | {:error, InvalidMission.t()},
-          [PathWarning.t()],
           FlightStep.t(),
-          pos_integer(),
-          [Row.t()]
+          pos_integer()
         ) :: t()
   def new(
         params,
         %Ecto.Changeset{} = changeset,
+        rows,
         steps,
         result,
-        warnings,
         %FlightStep{} = next_step,
-        step_limit,
-        rows
+        step_limit
       )
-      when is_map(params) and is_list(steps) and is_list(warnings) and
-             is_integer(step_limit) and
-             step_limit > 0 and is_list(rows) do
+      when is_map(params) and is_list(rows) and is_list(steps) and is_integer(step_limit) and
+             step_limit > 0 do
     {report, error} =
       case result do
         {:ok, %FuelReport{} = report} -> {report, nil}
@@ -83,14 +68,45 @@ defmodule FuelCalculator.Evaluation do
     %__MODULE__{
       params: params,
       changeset: changeset,
-      step_ids: Enum.map(rows, fn %Row{id: id} -> id end),
+      rows: rows,
       steps: steps,
       report: report,
       error: error,
-      warnings: warnings,
       next_step: next_step,
-      step_limit: step_limit,
-      rows: rows
+      step_limit: step_limit
     }
+  end
+
+  @doc "The id of every submitted step, in order."
+  @spec step_ids(t()) :: [String.t()]
+  def step_ids(%__MODULE__{rows: rows}), do: Enum.map(rows, fn %Row{id: id} -> id end)
+
+  @doc "Whether a step with this id was submitted."
+  @spec has_step?(t(), String.t()) :: boolean()
+  def has_step?(%__MODULE__{rows: rows}, id) when is_binary(id),
+    do: Enum.any?(rows, &match?(%Row{id: ^id}, &1))
+
+  @doc "The path warnings, in step order (none while any step is invalid)."
+  @spec warnings(t()) :: [PathWarning.t()]
+  def warnings(%__MODULE__{rows: rows}),
+    do: for(%Row{warning: %PathWarning{} = warning} <- rows, do: warning)
+
+  @doc "The id of the first step with a path warning, or `nil` when there is none."
+  @spec first_warning_step_id(t()) :: String.t() | nil
+  def first_warning_step_id(%__MODULE__{rows: rows}) do
+    case Enum.find(rows, &match?(%Row{warning: %PathWarning{}}, &1)) do
+      %Row{id: id} -> id
+      nil -> nil
+    end
+  end
+
+  @doc "How many more steps the path can take."
+  @spec room(t()) :: non_neg_integer()
+  def room(%__MODULE__{rows: rows, step_limit: step_limit}) when is_integer(step_limit) do
+    # Over the limit there are no rows (the path is rejected), so room stays >= 0.
+    case step_limit - length(rows) do
+      room when room > 0 -> room
+      _full -> 0
+    end
   end
 end

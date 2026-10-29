@@ -53,7 +53,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
         />
         <path
           :if={@warned}
-          d="M178 0 C138 6, 52 3, 22 15"
+          d={Spine.warned_jump_path()}
           fill="none"
           class="stroke-warn-border"
           stroke-width="2"
@@ -66,7 +66,7 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
           fill="none"
           class={[
             "motion-arc-enter transition-[stroke-width,stroke] duration-300",
-            if(@selected, do: "stroke-[var(--fuel-arc-selected)]", else: "stroke-[var(--spine)]")
+            if(@selected, do: "stroke-fuel-arc-selected", else: "stroke-spine")
           ]}
           style={"stroke-width: #{@arc.stroke_width}px"}
           stroke-linecap="round"
@@ -90,8 +90,8 @@ defmodule FuelCalculatorWeb.Mission.SpineComponents do
       "absolute left-[22px] flex -translate-x-1/2 items-center justify-center",
       if(@arc.ring_at == :top, do: "top-[15%] -translate-y-1/2", else: "bottom-[15%] translate-y-1/2")
     ]}>
-      <%!-- Option A ("filled ring"): violet-tinted disc with a solid violet edge,
-           a gap in the card colour around it, and a planet-coloured dot. --%>
+      <%!-- Burn marker: a violet-tinted disc with a solid violet edge, a gap in
+           the card colour around it, and a planet-coloured dot. --%>
       <span
         :if={@arc.ring_size > 0}
         class={[

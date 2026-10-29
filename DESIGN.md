@@ -122,8 +122,8 @@ Desktop, one column of content, max width about 1240px.
      move down / remove, and "Mass at burn … · ship + fuel for steps …".
    - The selected row expands to show its fuel chain as bars that shrink step
      by step, then the step total.
-   - After the last row: a dashed "ghost" arc and the Add step button labelled
-     with the suggested next step.
+   - After the last row: the Add step button labelled with the suggested next
+     step.
 4. **How fuel is calculated:** a collapsed disclosure with the formulas and
    gravities.
 5. **Pinned total bar:** a floating rounded bar at the bottom of the viewport, shown once the summary
@@ -150,7 +150,7 @@ a planet-coloured dot with a card-coloured border.
 | Validation error | Red border on the field, x-circle + message below it (`aria-describedby`). The total shows `—` with the reason. Shown after the debounce or on blur, never on the first keystroke |
 | Path warning | Amber box with a solid triangle, "Check path." + explanation, and two fix buttons: add the missing steps before this one (primary, e.g. "Add Launch from Moon before") and change this step (secondary, e.g. "Change to Launch from Moon"). The step number and the spine's jump line turn amber, and the summary and pinned bar show a badge linking to the first warning. The total stays |
 | Zero-fuel step | `0 kg` with the formula worked through, rounding included, under the step and in its fuel chain, e.g. `⌊100 × 1.62 × 0.033⌋ − 42 = 5 − 42 = −37` |
-| Empty path | "No steps yet" with the three presets; total `—` |
+| Empty path | "No steps yet · Add a launch to start, or pick a mission above."; total `—` |
 | Step limit | Add step looks disabled but stays focusable (`aria-disabled`), described by "A flight path holds up to 20 steps." in neutral styling. The same goes for a warning's "Add … before" fix when the steps wouldn't fit |
 | Invalid step or too many steps | x-circle + message on the step ("Choose Earth, Moon or Mars.") or under the path ("A flight path holds up to 20 steps.") |
 | Reconnecting | An ink pill at the top, "Reconnecting. Values may be out of date." with a spinning arrow (no close button: it goes away on reconnect). The summary, steps and pinned bar contents are dimmed (the bar itself stays opaque), driven by LiveView's `.phx-client-error` / `.phx-server-error` classes |

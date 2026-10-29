@@ -4,6 +4,7 @@ defmodule FuelCalculator.Fuel do
 
   alias FuelCalculator.Burn
   alias FuelCalculator.FlightStep
+  alias FuelCalculator.Formula
   alias FuelCalculator.FuelReport
   alias FuelCalculator.Mission
   alias FuelCalculator.Planet
@@ -73,15 +74,12 @@ defmodule FuelCalculator.Fuel do
     StepFuel.new(step, mass_kg, chain_kg)
   end
 
-  @doc """
-  Each action's factor (in thousandths) and offset, in the order of
-  `FlightStep.actions/0`: launch = mass × gravity × 0.042 − 33, land = … × 0.033 − 42.
-  """
-  @spec factors() :: [{FlightStep.action(), pos_integer(), pos_integer()}]
-  def factors do
+  @doc "Each maneuver's formula, in the order of `FlightStep.actions/0`."
+  @spec formulas() :: [Formula.t()]
+  def formulas do
     for action <- FlightStep.actions() do
       {factor, offset} = Map.fetch!(@formula, action)
-      {action, factor, offset}
+      Formula.new(action, factor, offset)
     end
   end
 

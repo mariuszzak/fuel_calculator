@@ -25,12 +25,10 @@ defmodule FuelCalculator.RawParams do
   # Form submissions index steps as "0", "1", ...; three digits cover any valid path.
   @index_format ~r/\A\d{1,3}\z/
 
-  @spec normalize(term()) :: t()
+  @spec normalize(map()) :: t()
   def normalize(params) when is_map(params) do
     %{"mass" => mass(Map.get(params, "mass")), "steps" => steps(Map.get(params, "steps"))}
   end
-
-  def normalize(_not_a_map), do: normalize(%{})
 
   # Trimmed first, then kept to one character over the limit: enough for
   # MissionParams to reject it, never cut down into a different valid number.

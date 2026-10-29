@@ -34,21 +34,20 @@ defmodule FuelCalculator.MissionParams do
     @spec changeset(%__MODULE__{}, map()) :: Ecto.Changeset.t()
     def changeset(%__MODULE__{} = step, attrs) do
       step
+      # Ids are always present and well formed: RawParams guarantees it.
       |> cast(attrs, [:id, :action, :planet], message: &cast_message/2)
-      |> validate_required([:id])
       |> validate_required([:action], message: "Choose launch or land.")
       |> validate_required([:planet], message: "Choose Earth, Moon or Mars.")
     end
 
     defp cast_message(:action, _meta), do: "Choose launch or land."
     defp cast_message(:planet, _meta), do: "Choose Earth, Moon or Mars."
-    defp cast_message(:id, _meta), do: "is invalid"
   end
 
   @max_steps 20
   @max_mass_kg 1_000_000_000
   # Longer digit strings are out of range; checked before converting to an integer.
-  @max_mass_digits 10
+  @max_mass_digits @max_mass_kg |> Integer.digits() |> length()
   # Far beyond any valid mass ("1,000,000,000" is 13 characters), short enough to
   # parse and render cheaply; RawParams keeps one character more, so a longer
   # value is rejected instead of being cut into a different, valid number.
@@ -69,9 +68,10 @@ defmodule FuelCalculator.MissionParams do
   def step_limit, do: @max_steps
 
   @doc false
-  @spec room_for_another_step?(non_neg_integer()) :: boolean()
-  def room_for_another_step?(step_count) when is_integer(step_count) and step_count >= 0,
-    do: step_count < @max_steps
+  # Whether a path of this many steps is within the limit.
+  @spec fits?(non_neg_integer()) :: boolean()
+  def fits?(step_count) when is_integer(step_count) and step_count >= 0,
+    do: step_count <= @max_steps
 
   @spec changeset(map()) :: Ecto.Changeset.t()
   def changeset(attrs) when is_map(attrs) do
@@ -94,16 +94,6 @@ defmodule FuelCalculator.MissionParams do
   end
 
   @doc false
-  # The steps that are valid on their own, even when the rest of the input isn't.
-  @spec valid_steps(Ecto.Changeset.t()) :: [FlightStep.t()]
-  def valid_steps(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> get_embed(:steps, :changeset)
-    |> Enum.filter(& &1.valid?)
-    |> Enum.map(fn %Ecto.Changeset{} = step -> step |> apply_changes() |> to_flight_step() end)
-  end
-
-  @doc false
   # Every submitted step in order: the validated step, or nil while it's invalid.
   @spec steps_by_position(Ecto.Changeset.t()) :: [FlightStep.t() | nil]
   def steps_by_position(%Ecto.Changeset{} = changeset) do
@@ -117,7 +107,7 @@ defmodule FuelCalculator.MissionParams do
 
   @doc false
   # The submitted step ids in order, including steps that are otherwise invalid.
-  @spec step_ids(Ecto.Changeset.t()) :: [String.t() | nil]
+  @spec step_ids(Ecto.Changeset.t()) :: [String.t()]
   def step_ids(%Ecto.Changeset{} = changeset) do
     changeset
     |> get_embed(:steps, :changeset)
@@ -194,9 +184,8 @@ defmodule FuelCalculator.MissionParams do
     end
   end
 
-  defp raw_step_count(steps) when is_map(steps), do: map_size(steps)
+  # RawParams always gives a list (possibly empty).
   defp raw_step_count(steps) when is_list(steps), do: length(steps)
-  defp raw_step_count(_not_a_collection), do: 0
 
   defp invalid_mission(changeset) do
     changeset

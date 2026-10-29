@@ -162,6 +162,10 @@
   --color-warn-bg: var(--warn-bg);
   --color-warn-border: var(--warn-border);
   --color-warn-icon: var(--warn-icon);
+  --color-spine: var(--spine);
+  --color-fuel-arc-selected: var(--fuel-arc-selected);
+  --color-step-number-selected: var(--step-number-selected);
+  --shadow-float: var(--float-shadow);
 }
 
 /* Add variants based on LiveView classes */

@@ -10,27 +10,14 @@ defmodule FuelCalculatorTest do
   alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FuelReport
   alias FuelCalculator.Mission
+  alias FuelCalculator.MissionParams
   alias FuelCalculator.PathWarning
   alias FuelCalculator.StepFuel
 
-  defp params(mass, path) do
-    steps =
-      path
-      |> steps()
-      |> Enum.with_index()
-      |> Enum.map(fn {step, index} ->
-        %{
-          "id" => "step-#{index}",
-          "action" => Atom.to_string(step.action),
-          "planet" => Atom.to_string(step.planet.id)
-        }
-      end)
-
-    %{"mass" => mass, "steps" => steps}
-  end
-
-  defp step_ids(params), do: Enum.map(params["steps"], & &1["id"])
   defp step_texts(params), do: Enum.map(params["steps"], &"#{&1["action"]} #{&1["planet"]}")
+
+  defp add_suggested_step(params),
+    do: FuelCalculator.add_step(params, FuelCalculator.evaluate(params).next_step)
 
   describe "evaluating a valid mission" do
     test "reports the fuel for a spec mission" do
@@ -38,15 +25,12 @@ defmodule FuelCalculatorTest do
 
       evaluation = FuelCalculator.evaluate(params)
 
-      assert %Evaluation{
-               report: %FuelReport{total_fuel_kg: 51_898},
-               error: nil,
-               warnings: []
-             } = evaluation
+      assert %Evaluation{report: %FuelReport{total_fuel_kg: 51_898}, error: nil} = evaluation
+      assert Evaluation.warnings(evaluation) == []
     end
 
     test "suggests the next step from where the ship ends up" do
-      params = params("28801", "launch earth, land moon")
+      params = form_params("28801", "launch earth, land moon")
 
       evaluation = FuelCalculator.evaluate(params)
 
@@ -55,29 +39,15 @@ defmodule FuelCalculatorTest do
     end
 
     test "accepts thousands separators in the mass" do
-      params = params("28,801", "land earth")
+      params = form_params("28,801", "land earth")
 
       evaluation = FuelCalculator.evaluate(params)
 
       assert %Evaluation{report: %FuelReport{total_fuel_kg: 13_447}} = evaluation
-    end
-
-    test "ignores leading zeros in the mass" do
-      evaluation = FuelCalculator.evaluate(params("00,028,801", "land earth"))
-
-      assert %Evaluation{report: %FuelReport{total_fuel_kg: 13_447}} = evaluation
-    end
-
-    test "never fails on a tampered step entry that isn't a map" do
-      params = %{"mass" => "1000", "steps" => %{"0" => ["x"], "1" => [[]]}}
-
-      evaluation = FuelCalculator.evaluate(params)
-
-      assert %Evaluation{steps: [], report: %FuelReport{total_fuel_kg: 0}} = evaluation
     end
 
     test "ignores whitespace around the mass" do
-      params = params(" 28801 ", "land earth")
+      params = form_params(" 28801 ", "land earth")
 
       evaluation = FuelCalculator.evaluate(params)
 
@@ -85,7 +55,7 @@ defmodule FuelCalculatorTest do
     end
 
     test "accepts an empty flight path and needs no fuel" do
-      params = params("28801", "")
+      params = form_params("28801", "")
 
       evaluation = FuelCalculator.evaluate(params)
 
@@ -124,7 +94,7 @@ defmodule FuelCalculatorTest do
           {String.duplicate("9", 10_000), "Mass must be at most 1,000,000,000 kg."}
         ] do
       test "explains what is wrong with #{inspect(String.slice(raw, 0, 12))}" do
-        params = params(unquote(raw), "land earth")
+        params = form_params(unquote(raw), "land earth")
 
         evaluation = FuelCalculator.evaluate(params)
 
@@ -145,12 +115,14 @@ defmodule FuelCalculatorTest do
     end
 
     test "still checks the path and suggests the next step while the mass is invalid" do
-      params = params("abc", "launch earth, land moon, launch mars")
+      params = form_params("abc", "launch earth, land moon, launch mars")
 
       evaluation = FuelCalculator.evaluate(params)
 
-      assert %Evaluation{report: nil, warnings: warnings, next_step: next_step} = evaluation
-      assert [%PathWarning{step_index: 2, kind: :launch_from_other_planet}] = warnings
+      assert %Evaluation{report: nil, next_step: next_step} = evaluation
+
+      assert [%PathWarning{step_index: 2, kind: :launch_from_other_planet}] =
+               Evaluation.warnings(evaluation)
 
       assert next_step == step("land earth")
     end
@@ -211,7 +183,7 @@ defmodule FuelCalculatorTest do
     end
 
     test "rejects more than 20 steps without processing them" do
-      params = params("1000", Enum.map_join(1..21, ", ", fn _n -> "launch earth" end))
+      params = form_params("1000", Enum.map_join(1..21, ", ", fn _n -> "launch earth" end))
 
       evaluation = FuelCalculator.evaluate(params)
 
@@ -226,7 +198,7 @@ defmodule FuelCalculatorTest do
 
   describe "one row per step" do
     test "carries each step's id, step, fuel and warning in flight order" do
-      params = params("28801", "launch earth, land moon, launch mars")
+      params = form_params("28801", "launch earth, land moon, launch mars")
 
       evaluation = FuelCalculator.evaluate(params)
 
@@ -238,7 +210,7 @@ defmodule FuelCalculatorTest do
     end
 
     test "has no fuel while the mass is invalid, but keeps the steps" do
-      params = params("", "launch earth, land moon")
+      params = form_params("", "launch earth, land moon")
 
       evaluation = FuelCalculator.evaluate(params)
 
@@ -273,7 +245,7 @@ defmodule FuelCalculatorTest do
 
   describe "building a mission" do
     test "turns valid params into a mission" do
-      params = params("28801", "launch earth, land moon")
+      params = form_params("28801", "launch earth, land moon")
 
       result = FuelCalculator.build_mission(params)
 
@@ -301,67 +273,80 @@ defmodule FuelCalculatorTest do
 
   describe "editing the flight path" do
     test "adds the suggested next step" do
-      params = params("28801", "launch earth, land moon")
+      params = form_params("28801", "launch earth, land moon")
 
-      updated = FuelCalculator.add_step(params)
+      updated = add_suggested_step(params)
 
       assert step_texts(updated) == ["launch earth", "land moon", "launch moon"]
     end
 
     test "gives every added step a new id" do
-      params = params("28801", "launch earth")
+      params = form_params("28801", "launch earth")
 
-      updated = params |> FuelCalculator.add_step() |> FuelCalculator.add_step()
+      updated = params |> add_suggested_step() |> add_suggested_step()
 
-      assert updated |> step_ids() |> Enum.uniq() |> length() == 3
+      assert updated |> form_step_ids() |> Enum.uniq() |> length() == 3
     end
 
     test "doesn't add a step to a full path" do
-      params = params("1000", Enum.map_join(1..20, ", ", fn _n -> "launch earth" end))
+      params = form_params("1000", repeated("launch earth", MissionParams.step_limit()))
 
-      updated = FuelCalculator.add_step(params)
+      updated = add_suggested_step(params)
 
       assert updated == params
     end
 
     test "removes a step by id" do
-      params = params("28801", "launch earth, land moon, launch moon")
+      params = form_params("28801", "launch earth, land moon, launch moon")
 
       updated = FuelCalculator.remove_step(params, "step-1")
 
-      assert step_ids(updated) == ["step-0", "step-2"]
+      assert form_step_ids(updated) == ["step-0", "step-2"]
     end
 
-    test "moves a step up and down" do
-      params = params("28801", "launch earth, land moon, launch moon")
+    test "moves a step up" do
+      params = form_params("28801", "launch earth, land moon, launch moon")
 
-      assert params |> FuelCalculator.move_step("step-2", :up) |> step_ids() ==
-               ["step-0", "step-2", "step-1"]
+      updated = FuelCalculator.move_step(params, "step-2", :up)
 
-      assert params |> FuelCalculator.move_step("step-0", :down) |> step_ids() ==
-               ["step-1", "step-0", "step-2"]
+      assert form_step_ids(updated) == ["step-0", "step-2", "step-1"]
     end
 
-    test "leaves the path unchanged when moving past either end or using an unknown id" do
-      params = params("28801", "launch earth, land moon")
+    test "moves a step down" do
+      params = form_params("28801", "launch earth, land moon, launch moon")
 
-      assert params |> FuelCalculator.move_step("step-0", :up) |> step_ids() == [
-               "step-0",
-               "step-1"
-             ]
+      updated = FuelCalculator.move_step(params, "step-0", :down)
 
-      assert params |> FuelCalculator.move_step("step-1", :down) |> step_ids() == [
-               "step-0",
-               "step-1"
-             ]
+      assert form_step_ids(updated) == ["step-1", "step-0", "step-2"]
+    end
 
-      assert params |> FuelCalculator.move_step("nope", :up) |> step_ids() == ["step-0", "step-1"]
-      assert params |> FuelCalculator.remove_step("nope") |> step_ids() == ["step-0", "step-1"]
+    for {name, id, direction} <- [
+          {"the first step up", "step-0", :up},
+          {"the last step down", "step-1", :down},
+          {"an unknown step", "nope", :up}
+        ] do
+      test "leaves the path unchanged when moving #{name}" do
+        params = form_params("28801", "launch earth, land moon")
+
+        updated = FuelCalculator.move_step(params, unquote(id), unquote(direction))
+
+        assert form_step_ids(updated) == ["step-0", "step-1"]
+      end
+    end
+
+    test "leaves the path unchanged when removing an unknown step" do
+      params = form_params("28801", "launch earth, land moon")
+
+      updated = FuelCalculator.remove_step(params, "nope")
+
+      assert form_step_ids(updated) == ["step-0", "step-1"]
     end
 
     test "inserts a warning's missing steps before the flagged step" do
-      params = params("28801", "launch earth, land moon, launch mars, land earth")
-      %Evaluation{warnings: [%PathWarning{insertion: missing}]} = FuelCalculator.evaluate(params)
+      params = form_params("28801", "launch earth, land moon, launch mars, land earth")
+
+      [%PathWarning{insertion: missing}] =
+        params |> FuelCalculator.evaluate() |> Evaluation.warnings()
 
       updated = FuelCalculator.insert_steps_before(params, "step-2", missing)
 
@@ -375,11 +360,11 @@ defmodule FuelCalculatorTest do
                  "land earth"
                ]
 
-      assert %Evaluation{warnings: []} = FuelCalculator.evaluate(updated)
+      assert updated |> FuelCalculator.evaluate() |> Evaluation.warnings() == []
     end
 
     test "doesn't insert steps past the step limit" do
-      params = params("1000", Enum.map_join(1..19, ", ", fn _n -> "land earth" end))
+      params = form_params("1000", repeated("land earth", MissionParams.step_limit() - 1))
 
       updated =
         FuelCalculator.insert_steps_before(params, "step-5", steps("launch earth, land moon"))
@@ -388,18 +373,20 @@ defmodule FuelCalculatorTest do
     end
 
     test "replaces a step with a warning's alternative, keeping the step's id" do
-      params = params("28801", "launch earth, land moon, launch mars")
-      %Evaluation{warnings: [%PathWarning{replacement: fix}]} = FuelCalculator.evaluate(params)
+      params = form_params("28801", "launch earth, land moon, launch mars")
+
+      [%PathWarning{replacement: fix}] =
+        params |> FuelCalculator.evaluate() |> Evaluation.warnings()
 
       updated = FuelCalculator.replace_step(params, "step-2", fix)
 
       assert step_texts(updated) == ["launch earth", "land moon", "launch moon"]
-      assert step_ids(updated) == ["step-0", "step-1", "step-2"]
-      assert %Evaluation{warnings: []} = FuelCalculator.evaluate(updated)
+      assert form_step_ids(updated) == ["step-0", "step-1", "step-2"]
+      assert updated |> FuelCalculator.evaluate() |> Evaluation.warnings() == []
     end
 
     test "clears the path but keeps the mass" do
-      params = params("28801", "launch earth, land moon")
+      params = form_params("28801", "launch earth, land moon")
 
       updated = FuelCalculator.clear_steps(params)
 
@@ -411,17 +398,37 @@ defmodule FuelCalculatorTest do
     test "give fresh steps ids from the preset and position, the same on every load" do
       params = FuelCalculator.preset_params(:apollo_11)
 
-      assert step_ids(params) == ["apollo_11-1", "apollo_11-2", "apollo_11-3", "apollo_11-4"]
+      assert form_step_ids(params) == ["apollo_11-1", "apollo_11-2", "apollo_11-3", "apollo_11-4"]
       assert FuelCalculator.preset_params(:apollo_11) == params
     end
 
     test "are matched however the mass is written" do
-      params = %{FuelCalculator.preset_params(:apollo_11) | "mass" => "28,801"}
+      evaluation =
+        FuelCalculator.evaluate(
+          form_params("28,801", "launch earth, land moon, launch moon, land earth")
+        )
 
-      assert FuelCalculator.matches_preset?(params, :apollo_11)
-      refute FuelCalculator.matches_preset?(params, :mars_mission)
-      refute FuelCalculator.matches_preset?(%{params | "mass" => "28802"}, :apollo_11)
-      refute FuelCalculator.matches_preset?(%{params | "mass" => ""}, :apollo_11)
+      matches? = FuelCalculator.matches_preset?(evaluation, :apollo_11)
+
+      assert matches?
+    end
+
+    test "aren't matched by another mission" do
+      evaluation = FuelCalculator.evaluate(FuelCalculator.preset_params(:apollo_11))
+
+      matches? = FuelCalculator.matches_preset?(evaluation, :mars_mission)
+
+      refute matches?
+    end
+
+    for {name, mass} <- [{"another mass", "28802"}, {"an invalid mass", ""}] do
+      test "aren't matched with #{name}" do
+        params = %{FuelCalculator.preset_params(:apollo_11) | "mass" => unquote(mass)}
+
+        matches? = FuelCalculator.matches_preset?(FuelCalculator.evaluate(params), :apollo_11)
+
+        refute matches?
+      end
     end
 
     test "offers the three spec missions" do
@@ -430,11 +437,11 @@ defmodule FuelCalculatorTest do
     end
 
     test "reuses the current step ids by position, so rows on screen are updated" do
-      current = params("28801", "launch earth, land moon")
+      current = form_params("28801", "launch earth, land moon")
 
       params = FuelCalculator.preset_params(:mars_mission, current)
 
-      assert [first, second | new_ids] = step_ids(params)
+      assert [first, second | new_ids] = form_step_ids(params)
       assert {first, second} == {"step-0", "step-1"}
       assert length(new_ids) == 2
       assert Enum.all?(new_ids, &(&1 not in ["step-0", "step-1"]))
@@ -443,7 +450,7 @@ defmodule FuelCalculatorTest do
     test "gives each preset step a unique id" do
       params = FuelCalculator.preset_params(:passenger_ship)
 
-      assert params |> step_ids() |> Enum.uniq() |> length() == 6
+      assert params |> form_step_ids() |> Enum.uniq() |> length() == 6
     end
   end
 

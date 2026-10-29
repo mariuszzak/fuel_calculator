@@ -32,8 +32,8 @@ const liveSocket = new LiveSocket("/live", Socket, {
   hooks: {...colocatedHooks},
 })
 
-// Show progress bar on live navigation and form submits
-// The accent violet of the light theme.
+// A thin progress bar while the page connects or reconnects. Its canvas can't
+// read CSS variables, so this is the light theme's accent violet.
 topbar.config({barColors: {0: "#7354E8"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())

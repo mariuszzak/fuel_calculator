@@ -76,7 +76,7 @@ defmodule FuelCalculatorWeb.MissionLive do
         How fuel is calculated
       </summary>
       <ul class="mt-2 font-mono text-xs leading-loose">
-        <li :for={factors <- FuelCalculator.formula_factors()}>{Format.formula(factors)}</li>
+        <li :for={formula <- FuelCalculator.formulas()}>{Format.formula(formula)}</li>
         <li>
           g: {Enum.map_join(FuelCalculator.planets(), " · ", &"#{&1.name} #{Format.gravity(&1)}")} m/s²
         </li>
@@ -98,12 +98,13 @@ defmodule FuelCalculatorWeb.MissionLive do
     {:noreply, put_params(socket, params)}
   end
 
-  def handle_event("load_preset", %{"id" => id}, socket) do
-    case preset_id(id) do
-      {:ok, preset_id} ->
-        {:noreply, socket |> offer_preset_undo(preset_id) |> load_preset(preset_id)}
+  # The id is matched against the presets on offer, never turned into an atom.
+  def handle_event("load_preset", %{"id" => id}, socket) when is_binary(id) do
+    case Enum.find(socket.assigns.presets, &(Atom.to_string(&1.id) == id)) do
+      %Preset{} = preset ->
+        {:noreply, socket |> offer_preset_undo(preset) |> load_preset(preset.id)}
 
-      :error ->
+      nil ->
         {:noreply, socket}
     end
   end
@@ -129,7 +130,7 @@ defmodule FuelCalculatorWeb.MissionLive do
 
   def handle_event("move_step", %{"id" => id, "direction" => direction}, socket)
       when is_binary(id) do
-    case {direction(direction), id in socket.assigns.evaluation.step_ids} do
+    case {direction(direction), Evaluation.has_step?(socket.assigns.evaluation, id)} do
       {{:ok, direction}, true} ->
         {:noreply,
          socket
@@ -139,7 +140,7 @@ defmodule FuelCalculatorWeb.MissionLive do
       {{:ok, _direction}, false} ->
         {:noreply, socket}
 
-      {:error, _known_step} ->
+      {:error, _known?} ->
         {:noreply, socket}
     end
   end
@@ -171,13 +172,13 @@ defmodule FuelCalculatorWeb.MissionLive do
   end
 
   def handle_event("select_step", %{"id" => id}, socket) when is_binary(id) do
-    if id in socket.assigns.evaluation.step_ids,
+    if Evaluation.has_step?(socket.assigns.evaluation, id),
       do: {:noreply, assign(socket, selected_step_id: id)},
       else: {:noreply, socket}
   end
 
   def handle_event("clear_path", _params, socket) do
-    case length(socket.assigns.evaluation.step_ids) do
+    case length(socket.assigns.evaluation.rows) do
       0 ->
         {:noreply, socket}
 
@@ -193,9 +194,9 @@ defmodule FuelCalculatorWeb.MissionLive do
   def handle_event("undo", _params, socket) do
     case socket.assigns.undo do
       %Undo{params: params, preset_id: preset_id} ->
-        %Evaluation{step_ids: ids_before} = socket.assigns.evaluation
+        ids_before = Evaluation.step_ids(socket.assigns.evaluation)
         socket = socket |> assign(undo: nil, preset_id: preset_id) |> put_params(params)
-        restored_ids = socket.assigns.evaluation.step_ids -- ids_before
+        restored_ids = Evaluation.step_ids(socket.assigns.evaluation) -- ids_before
 
         # Focus the first step that came back; otherwise stay near the path.
         {:noreply, focus(socket, Enum.map(restored_ids, &("step-number-" <> &1)) ++ ["add-step"])}
@@ -249,7 +250,7 @@ defmodule FuelCalculatorWeb.MissionLive do
   # that was used is disabled, so focus its opposite instead. On phones the
   # buttons are hidden and the step's menu gets focus.
   defp focus_moved_step(socket, id, direction) do
-    %Evaluation{step_ids: step_ids} = socket.assigns.evaluation
+    step_ids = Evaluation.step_ids(socket.assigns.evaluation)
     index = Enum.find_index(step_ids, &(&1 == id))
     last = length(step_ids) - 1
 
@@ -276,17 +277,15 @@ defmodule FuelCalculatorWeb.MissionLive do
 
   # Loading a preset over the user's own edits can be undone; switching between
   # untouched presets loses nothing, so it needs no toast.
-  defp offer_preset_undo(%{assigns: %{modified: true}} = socket, preset_id) do
-    %Preset{name: name} = Enum.find(socket.assigns.presets, &match?(%Preset{id: ^preset_id}, &1))
-    remember_for_undo(socket, "Loaded #{name}")
-  end
+  defp offer_preset_undo(%{assigns: %{modified: true}} = socket, %Preset{name: name}),
+    do: remember_for_undo(socket, "Loaded #{name}")
 
-  defp offer_preset_undo(socket, _preset_id), do: socket
+  defp offer_preset_undo(socket, %Preset{}), do: socket
 
   defp removal_label(%Evaluation{rows: rows}, id) do
-    case Enum.find_index(rows, &match?(%Row{id: ^id}, &1)) do
+    case rows |> Enum.with_index() |> Enum.find(&match?({%Row{id: ^id}, _index}, &1)) do
+      {%Row{} = row, index} -> removal_label(row, index)
       nil -> nil
-      index -> removal_label(Enum.at(rows, index), index)
     end
   end
 
@@ -306,7 +305,7 @@ defmodule FuelCalculatorWeb.MissionLive do
   # Only the cleaned params from the evaluation are kept (never the raw browser
   # params), so state and undo hold bounded, known data.
   defp put_params(socket, params) do
-    %Evaluation{params: clean_params, changeset: changeset, step_ids: step_ids} =
+    %Evaluation{params: clean_params, changeset: changeset} =
       evaluation = FuelCalculator.evaluate(params)
 
     assign(socket,
@@ -314,8 +313,9 @@ defmodule FuelCalculatorWeb.MissionLive do
       evaluation: evaluation,
       form: to_form(changeset, as: :mission),
       # Edited back to the preset's exact mission counts as unmodified.
-      modified: not FuelCalculator.matches_preset?(clean_params, socket.assigns.preset_id),
-      selected_step_id: keep_selection(socket.assigns[:selected_step_id], step_ids)
+      modified: not FuelCalculator.matches_preset?(evaluation, socket.assigns.preset_id),
+      selected_step_id:
+        keep_selection(socket.assigns[:selected_step_id], Evaluation.step_ids(evaluation))
     )
   end
 
@@ -323,11 +323,6 @@ defmodule FuelCalculatorWeb.MissionLive do
   defp keep_selection(selected_id, step_ids) do
     if selected_id in step_ids, do: selected_id, else: List.first(step_ids)
   end
-
-  defp preset_id("apollo_11"), do: {:ok, :apollo_11}
-  defp preset_id("mars_mission"), do: {:ok, :mars_mission}
-  defp preset_id("passenger_ship"), do: {:ok, :passenger_ship}
-  defp preset_id(_unknown), do: :error
 
   defp direction("up"), do: {:ok, :up}
   defp direction("down"), do: {:ok, :down}

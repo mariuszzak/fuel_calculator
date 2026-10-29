@@ -5,6 +5,7 @@ defmodule FuelCalculatorWeb.Format do
 
   alias FuelCalculator.Burn
   alias FuelCalculator.FlightStep
+  alias FuelCalculator.Formula
   alias FuelCalculator.Planet
 
   @thousands_group 3
@@ -64,14 +65,12 @@ defmodule FuelCalculatorWeb.Format do
   @doc """
   One maneuver's fuel formula, rounded down.
 
-      iex> FuelCalculatorWeb.Format.formula({:land, 33, 42})
-      "land = ⌊m × g × 0.033 − 42⌋"
+      iex> FuelCalculatorWeb.Format.formula(FuelCalculator.Formula.new(:land, 33, 42))
+      "land = ⌊m × g × 0.033⌋ − 42"
   """
-  @spec formula({FlightStep.action(), pos_integer(), pos_integer()}) :: String.t()
-  def formula({action, factor_milli, offset})
-      when action in [:launch, :land] and is_integer(factor_milli) and is_integer(offset) do
-    "#{action} = ⌊m × g × #{decimal(factor_milli, @milli_digits)} − #{offset}⌋"
-  end
+  @spec formula(Formula.t()) :: String.t()
+  def formula(%Formula{action: action, factor_milli: factor_milli, offset_kg: offset_kg}),
+    do: "#{action} = ⌊m × g × #{decimal(factor_milli, @milli_digits)}⌋ − #{offset_kg}"
 
   @doc """
   A count with its noun, singular or plural.

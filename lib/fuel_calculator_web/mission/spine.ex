@@ -28,6 +28,8 @@ defmodule FuelCalculatorWeb.Mission.Spine do
   # bottom. Coordinates are in viewBox units.
   @launch_path "M22 0 L22 15 C22 70, 104 100, 178 100"
   @land_path "M178 0 C104 0, 22 30, 22 85 L22 100"
+  # A short dashed jump from orbit into a step the ship can't start from.
+  @warned_jump_path "M178 0 C138 6, 52 3, 22 15"
 
   # Line width (px) for the lightest and the heaviest burn in the mission.
   @min_stroke 2.0
@@ -48,6 +50,10 @@ defmodule FuelCalculatorWeb.Mission.Spine do
       new(step, stroke_width(carried / max_carried), ring_size(fuel, max_fuel))
     end)
   end
+
+  @doc "The dashed line drawn into a step with a path warning."
+  @spec warned_jump_path() :: String.t()
+  def warned_jump_path, do: @warned_jump_path
 
   @doc "An arc for a step without a calculation (e.g. while the mass is invalid)."
   @spec placeholder(FlightStep.t()) :: t()

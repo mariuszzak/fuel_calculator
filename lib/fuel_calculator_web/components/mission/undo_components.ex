@@ -18,7 +18,7 @@ defmodule FuelCalculatorWeb.Mission.UndoComponents do
         :if={@undo}
         id="undo-toast"
         role="status"
-        class="motion-toast fixed inset-x-4 bottom-24 z-30 mx-auto flex max-w-md items-center gap-3 rounded-full bg-base-content py-1.5 pl-5 pr-1.5 text-base-100 shadow-[var(--float-shadow)]"
+        class="motion-toast fixed inset-x-4 bottom-24 z-30 mx-auto flex max-w-md items-center gap-3 rounded-full bg-base-content py-1.5 pl-5 pr-1.5 text-base-100 shadow-float"
       >
         <span class="flex-1 text-sm">{@undo.label}</span>
         <button

@@ -1,7 +1,11 @@
 defmodule FuelCalculator.RawParamsTest do
   use ExUnit.Case, async: true
 
+  alias FuelCalculator.MissionParams
   alias FuelCalculator.RawParams
+
+  # Mirrors the bound on action and planet text in RawParams.
+  @max_value_length 16
 
   defp step(id, action \\ "launch", planet \\ "earth"),
     do: %{"id" => id, "action" => action, "planet" => planet}
@@ -19,7 +23,8 @@ defmodule FuelCalculator.RawParamsTest do
 
     %{"mass" => mass} = RawParams.normalize(params)
 
-    assert String.length(mass) == 33
+    # One character over the limit, so validation rejects it instead of reading a cut value.
+    assert String.length(mass) == MissionParams.max_mass_length() + 1
   end
 
   test "treats a mass that isn't text as missing" do
@@ -63,7 +68,7 @@ defmodule FuelCalculator.RawParamsTest do
 
     %{"steps" => [step]} = RawParams.normalize(params)
 
-    assert String.length(step["action"]) == 16
+    assert String.length(step["action"]) == @max_value_length
     assert step["planet"] == ""
   end
 
@@ -72,6 +77,7 @@ defmodule FuelCalculator.RawParamsTest do
 
     %{"steps" => steps} = RawParams.normalize(params)
 
-    assert length(steps) == 21
+    # One over the limit, so the limit can still be reported.
+    assert length(steps) == MissionParams.step_limit() + 1
   end
 end

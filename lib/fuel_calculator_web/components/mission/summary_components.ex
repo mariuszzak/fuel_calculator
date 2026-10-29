@@ -11,9 +11,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   alias FuelCalculator.Error.FieldError
   alias FuelCalculator.Error.InvalidMission
   alias FuelCalculator.Evaluation
-  alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FuelReport
-  alias FuelCalculator.PathWarning
   alias FuelCalculatorWeb.Format
 
   @doc "The summary panel for the current evaluation."
@@ -36,8 +34,8 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
           </h2>
           <.warning_badge
             id="warning-count"
-            count={length(@evaluation.warnings)}
-            target_id={first_warning_step_id(@evaluation)}
+            count={length(Evaluation.warnings(@evaluation))}
+            target_id={Evaluation.first_warning_step_id(@evaluation)}
           />
         </div>
         <span id="total-announcement" class="sr-only" aria-live="polite">{announcement(
@@ -60,13 +58,6 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
     """
   end
 
-  defp first_warning_step_id(%Evaluation{rows: rows}) do
-    case Enum.find(rows, &match?(%Row{warning: %PathWarning{}}, &1)) do
-      %Row{id: id} -> id
-      nil -> nil
-    end
-  end
-
   # The one polite live region: the settled total, the reason there is none,
   # and how many path warnings there are (the warning boxes themselves are silent).
   defp announcement(%FuelReport{total_fuel_kg: total}, %Evaluation{} = evaluation),
@@ -75,10 +66,12 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   defp announcement(nil, %Evaluation{} = evaluation),
     do: "Total fuel unavailable. " <> no_total_reason(evaluation)
 
-  defp warnings_note(%Evaluation{warnings: []}), do: ""
-
-  defp warnings_note(%Evaluation{warnings: warnings}),
-    do: " #{Format.count(length(warnings), "path warning")}."
+  defp warnings_note(%Evaluation{} = evaluation) do
+    case Evaluation.warnings(evaluation) do
+      [] -> ""
+      warnings -> " #{Format.count(length(warnings), "path warning")}."
+    end
+  end
 
   # A report for an empty path is valid but has nothing to show as a total.
   defp shown_report(%FuelReport{steps: [_ | _]} = report), do: report
@@ -88,8 +81,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   defp ratio(%FuelReport{wet_mass_kg: wet, mission: mission}),
     do: Format.ratio(wet, mission.mass_kg)
 
-  defp step_count(%Evaluation{step_ids: step_ids, step_limit: limit}),
-    do: "#{length(step_ids)} / #{limit}"
+  defp step_count(%Evaluation{rows: rows, step_limit: limit}), do: "#{length(rows)} / #{limit}"
 
   defp no_total_reason(%Evaluation{report: %FuelReport{steps: []}}), do: "Add at least one step."
 
@@ -194,8 +186,10 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   attr :evaluation, Evaluation, required: true
 
   def pinned_total(assigns) do
-    %Evaluation{report: report, step_ids: step_ids, step_limit: limit} = assigns.evaluation
-    assigns = assign(assigns, report: shown_report(report), full: length(step_ids) >= limit)
+    %Evaluation{report: report} = evaluation = assigns.evaluation
+
+    assigns =
+      assign(assigns, report: shown_report(report), full: Evaluation.room(evaluation) == 0)
 
     ~H"""
     <div
@@ -204,7 +198,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
       data-watch="summary"
       role="region"
       aria-label="Mission total"
-      class="fixed inset-x-3 bottom-3 z-20 mx-auto max-w-4xl rounded-box border border-rule bg-base-100/95 shadow-[var(--float-shadow)] backdrop-blur transition-transform duration-300 sm:translate-y-[calc(100%+1.5rem)] sm:data-pinned:translate-y-0"
+      class="fixed inset-x-3 bottom-3 z-20 mx-auto max-w-4xl rounded-box border border-rule bg-base-100/95 shadow-float backdrop-blur transition-transform duration-300 sm:translate-y-[calc(100%+1.5rem)] sm:data-pinned:translate-y-0"
     >
       <%!-- Phones: one row, the total (label and warnings above it) on the left
            and the Add step button on the right. --%>
@@ -215,8 +209,8 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
             <.warning_badge
               id="pinned-warning-count"
               compact
-              count={length(@evaluation.warnings)}
-              target_id={first_warning_step_id(@evaluation)}
+              count={length(Evaluation.warnings(@evaluation))}
+              target_id={Evaluation.first_warning_step_id(@evaluation)}
             />
           </span>
           <span

@@ -21,5 +21,6 @@ config :phoenix_live_view,
 config :phoenix,
   sort_verified_routes_query_params: true
 
-# Keep the undo toast short so tests can watch it expire.
-config :fuel_calculator, undo_timeout_ms: 50
+# Real undo timers never fire during a test; tests expire the toast by sending
+# the timer's message themselves (see MissionLiveTest), so timing can't flake.
+config :fuel_calculator, undo_timeout_ms: 600_000

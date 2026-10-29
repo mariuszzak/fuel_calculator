@@ -9,9 +9,8 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
   @launch_moon "apollo_11-3"
   @land_earth "apollo_11-4"
 
-  # The undo timeout is 50 ms in config/test.exs; this is comfortably longer.
-  @undo_wait_ms 150
-  @poll_ms 10
+  @preset_steps 4
+  @step_limit FuelCalculator.MissionParams.step_limit()
 
   defp row_ids(view) do
     view
@@ -39,14 +38,17 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
   defp change(view, mission),
     do: view |> form("#mission-form", mission: mission) |> render_change()
 
-  # Polls until the assertion holds, for things that happen on a timer.
-  defp eventually(fun, waited_ms \\ 0) do
-    fun.()
-  rescue
-    error in [ExUnit.AssertionError] ->
-      if waited_ms >= @undo_wait_ms * 4, do: reraise(error, __STACKTRACE__)
-      Process.sleep(@poll_ms)
-      eventually(fun, waited_ms + @poll_ms)
+  # The undo timer's reference, read from the LiveView's state. Tests deliver
+  # the timer's message themselves (the real timeout is long in config/test.exs),
+  # so expiry is deterministic.
+  defp undo_ref(view) do
+    %{socket: %{assigns: %{undo: %{ref: ref}}}} = :sys.get_state(view.pid)
+    ref
+  end
+
+  defp expire_undo(view, ref) do
+    send(view.pid, {:expire_undo, ref})
+    render(view)
   end
 
   # Builds a mission from an empty path, the way a user would: clear, add
@@ -283,15 +285,21 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       assert has_element?(view, "#add-step", "Launch from Earth")
     end
 
-    test "ignores events for steps that don't exist", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/")
+    for {event, params} <- [
+          {"remove_step", %{"id" => "nope"}},
+          {"move_step", %{"id" => "nope", "direction" => "up"}},
+          {"move_step", %{"id" => "apollo_11-1", "direction" => "sideways"}},
+          {"insert_fix", %{"id" => "nope"}},
+          {"replace_fix", %{"id" => "nope"}}
+        ] do
+      test "ignores #{event} with #{inspect(params)}", %{conn: conn} do
+        {:ok, view, _html} = live(conn, ~p"/")
 
-      render_click(view, "remove_step", %{"id" => "nope"})
-      render_click(view, "move_step", %{"id" => "nope", "direction" => "sideways"})
-      render_click(view, "insert_fix", %{"id" => "nope"})
+        render_click(view, unquote(event), unquote(Macro.escape(params)))
 
-      assert length(row_ids(view)) == 4
-      assert has_element?(view, "#total-fuel", "51,898")
+        assert row_ids(view) == [@launch_earth, @land_moon, @launch_moon, @land_earth]
+        assert has_element?(view, "#total-fuel", "51,898")
+      end
     end
   end
 
@@ -338,7 +346,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
   describe "a warning near the step limit" do
     test "disables adding the missing steps when they wouldn't fit, and says why", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
-      for _n <- 1..15, do: click(view, "#add-step")
+      for _n <- 1..(@step_limit - @preset_steps - 1), do: click(view, "#add-step")
       # 19 steps; a planet change makes a later step start somewhere the ship isn't.
       change(view, %{steps: %{"15" => %{planet: "moon"}}})
       flagged = first_flagged_step(view)
@@ -350,7 +358,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
     test "allows adding missing steps that exactly fill the path", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
-      for _n <- 1..14, do: click(view, "#add-step")
+      for _n <- 1..(@step_limit - @preset_steps - 2), do: click(view, "#add-step")
       # 18 steps; make the 13th a launch from Mars while the ship is on Earth.
       change(view, %{steps: %{"12" => %{planet: "mars"}}})
       flagged = first_flagged_step(view)
@@ -503,7 +511,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     test "Add step stays focusable and says why it's unavailable", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
 
-      for _n <- 1..16, do: click(view, "#add-step")
+      for _n <- 1..(@step_limit - @preset_steps), do: click(view, "#add-step")
 
       assert has_element?(view, "#add-step[aria-disabled=true][aria-describedby=step-limit]")
       assert has_element?(view, "#step-limit", "A flight path holds up to 20 steps.")
@@ -518,7 +526,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
 
     test "adding another step changes nothing", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
-      for _n <- 1..16, do: click(view, "#add-step")
+      for _n <- 1..(@step_limit - @preset_steps), do: click(view, "#add-step")
 
       click(view, "#add-step")
 
@@ -571,7 +579,7 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     test "isn't offered for clearing an empty path", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
       click(view, "#clear-path")
-      eventually(fn -> refute has_element?(view, "#undo-toast") end)
+      expire_undo(view, undo_ref(view))
 
       render_click(view, "clear_path", %{})
 
@@ -599,36 +607,46 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       refute has_element?(view, "#undo-toast")
     end
 
-    test "goes away after a few seconds", %{conn: conn} do
+    test "goes away when its timer runs out", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
-
       click(view, "#clear-path")
 
-      assert has_element?(view, "#undo-toast")
-      eventually(fn -> refute has_element?(view, "#undo-toast") end)
+      expire_undo(view, undo_ref(view))
+
+      refute has_element?(view, "#undo-toast")
     end
 
-    test "offers the newest change, with its own timer", %{conn: conn} do
+    test "offers the newest change, which the older timer can't close", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
       click(view, "#remove-#{@launch_earth}")
-
+      older_ref = undo_ref(view)
       click(view, "#remove-#{@land_moon}")
 
+      expire_undo(view, older_ref)
+
       assert has_element?(view, "#undo-toast", "Removed step 1: Land on Moon")
-      eventually(fn -> refute has_element?(view, "#undo-toast") end)
     end
 
-    test "waits while pointed at or focused, then goes away once released", %{conn: conn} do
+    test "waits while pointed at or focused", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      click(view, "#clear-path")
+      running_ref = undo_ref(view)
+
+      view |> element("#undo-region") |> render_hook("hold_undo", %{})
+      expire_undo(view, running_ref)
+
+      assert has_element?(view, "#undo-toast")
+    end
+
+    test "counts down again once released", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
       click(view, "#clear-path")
       view |> element("#undo-region") |> render_hook("hold_undo", %{})
 
-      # Longer than the timeout: the toast must still be there.
-      Process.sleep(@undo_wait_ms)
-      assert has_element?(view, "#undo-toast")
-
       view |> element("#undo-region") |> render_hook("release_undo", %{})
-      eventually(fn -> refute has_element?(view, "#undo-toast") end)
+      expire_undo(view, undo_ref(view))
+
+      refute has_element?(view, "#undo-toast")
     end
   end
 
@@ -658,16 +676,26 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       assert_push_event(view, "focus", %{ids: ["step-number-" <> @land_moon, "add-step"]})
     end
 
-    test "follows a moved step, switching buttons at the edge", %{conn: conn} do
+    test "follows a moved step, or its phone menu", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
 
       click(view, "#move-down-#{@launch_earth}")
-      assert_push_event(view, "focus", %{ids: focus_ids})
-      assert focus_ids == ["move-down-" <> @launch_earth, "step-menu-" <> @launch_earth]
+
+      assert_push_event(view, "focus", %{
+        ids: ["move-down-" <> @launch_earth, "step-menu-" <> @launch_earth]
+      })
+    end
+
+    test "switches to the other button when a step reaches the top", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      click(view, "#move-down-#{@launch_earth}")
 
       click(view, "#move-up-#{@launch_earth}")
-      assert_push_event(view, "focus", %{ids: edge_focus_ids})
-      assert edge_focus_ids == ["move-down-" <> @launch_earth, "step-menu-" <> @launch_earth]
+
+      assert_push_event(view, "focus", %{
+        ids: ["move-down-" <> @launch_earth, "step-menu-" <> @launch_earth]
+      })
+
       assert Enum.take(row_ids(view), 2) == [@launch_earth, @land_moon]
     end
 
@@ -700,8 +728,8 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       click(view, "#add-step")
 
       refute has_element?(view, "#step-fuel-#{@launch_earth}[data-value='32988']")
-      assert has_element?(view, "#wet-mass")
-      assert has_element?(view, "#pinned-total-fuel")
+      refute has_element?(view, "#wet-mass[data-value='80699']")
+      refute has_element?(view, "#pinned-total-fuel[data-value='51898']")
     end
   end
 

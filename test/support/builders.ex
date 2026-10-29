@@ -26,6 +26,36 @@ defmodule FuelCalculator.Builders do
     )
   end
 
+  @doc """
+  Form params as the browser sends them, with step ids "step-0", "step-1", ...
+
+      form_params("28801", "launch earth, land moon")
+  """
+  @spec form_params(String.t() | term(), String.t()) :: FuelCalculator.params()
+  def form_params(mass, path) do
+    steps =
+      path
+      |> steps()
+      |> Enum.with_index()
+      |> Enum.map(fn {%FlightStep{action: action, planet: %Planet{id: planet}}, index} ->
+        %{
+          "id" => "step-#{index}",
+          "action" => Atom.to_string(action),
+          "planet" => Atom.to_string(planet)
+        }
+      end)
+
+    %{"mass" => mass, "steps" => steps}
+  end
+
+  @doc "The step ids in form params, in order."
+  @spec form_step_ids(FuelCalculator.params()) :: [String.t()]
+  def form_step_ids(%{"steps" => steps}), do: Enum.map(steps, & &1["id"])
+
+  @doc "A path of `count` copies of one step, e.g. `repeated(\"launch earth\", 20)`."
+  @spec repeated(String.t(), pos_integer()) :: String.t()
+  def repeated(step, count), do: Enum.map_join(1..count, ", ", fn _n -> step end)
+
   # Looks the name up in the domain's own list, so it works before any module
   # holding the atom has been loaded.
   defp lookup(atoms, name),

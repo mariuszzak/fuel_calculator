@@ -32,6 +32,7 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
       <span class="flex w-full flex-wrap gap-2 sm:ml-auto sm:w-auto">
         <.fix_button
           event="insert_fix"
+          id={"insert-fix-#{@step_id}"}
           step_id={@step_id}
           class="border-warn-border bg-base-100 text-base-content"
           aria_disabled={!@fits}
@@ -39,7 +40,12 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
         >
           {insert_label(@warning)}
         </.fix_button>
-        <.fix_button event="replace_fix" step_id={@step_id} class="btn-ghost text-warn-fg">
+        <.fix_button
+          event="replace_fix"
+          id={"replace-fix-#{@step_id}"}
+          step_id={@step_id}
+          class="btn-ghost text-warn-fg"
+        >
           Change to {Format.step(@warning.replacement)}
         </.fix_button>
       </span>
@@ -51,18 +57,19 @@ defmodule FuelCalculatorWeb.Mission.PathWarningComponents do
     """
   end
 
+  attr :id, :string, required: true
   attr :event, :string, required: true
   attr :step_id, :string, required: true
   attr :class, :string, required: true
   attr :aria_disabled, :boolean, default: false, doc: "stays focusable so its reason is read"
-  attr :describedby, :any, default: nil
+  attr :describedby, :string, default: nil
   slot :inner_block, required: true
 
   defp fix_button(assigns) do
     ~H"""
     <button
       type="button"
-      id={"#{String.replace(@event, "_", "-")}-#{@step_id}"}
+      id={@id}
       phx-click={@event}
       phx-value-id={@step_id}
       aria-disabled={@aria_disabled && "true"}

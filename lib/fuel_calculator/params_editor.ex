@@ -15,7 +15,7 @@ defmodule FuelCalculator.ParamsEditor do
   alias FuelCalculator.Preset
   alias FuelCalculator.RawParams
 
-  @type params :: %{optional(String.t()) => term()}
+  @type params :: FuelCalculator.params()
 
   # Reuses the current steps' ids by position, so loading a preset updates the
   # rows already on screen instead of replacing all of them. Extra steps get ids
@@ -48,7 +48,7 @@ defmodule FuelCalculator.ParamsEditor do
     params = RawParams.normalize(params)
     steps = steps(params)
 
-    if MissionParams.room_for_another_step?(length(steps)),
+    if MissionParams.fits?(length(steps) + 1),
       do: put_steps(params, steps ++ [step_params(step)]),
       else: params
   end
@@ -78,7 +78,7 @@ defmodule FuelCalculator.ParamsEditor do
     params = RawParams.normalize(params)
     steps = steps(params)
     index = Enum.find_index(steps, &has_id?(&1, step_id))
-    fits? = MissionParams.room_for_another_step?(length(steps) + length(new_steps) - 1)
+    fits? = MissionParams.fits?(length(steps) + length(new_steps))
 
     case {index, fits?} do
       {nil, _fits?} ->

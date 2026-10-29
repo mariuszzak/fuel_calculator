@@ -17,24 +17,6 @@ defmodule FuelCalculator.EdgeCasesTest do
 
   @whole_kilograms "Use whole kilograms, for example 28801 or 28,801."
 
-  defp params(mass, path) do
-    steps =
-      path
-      |> steps()
-      |> Enum.with_index()
-      |> Enum.map(fn {step, index} ->
-        %{
-          "id" => "step-#{index}",
-          "action" => Atom.to_string(step.action),
-          "planet" => Atom.to_string(step.planet.id)
-        }
-      end)
-
-    %{"mass" => mass, "steps" => steps}
-  end
-
-  defp step_ids(params), do: Enum.map(params["steps"], & &1["id"])
-
   defp indexed_steps(count) do
     Map.new(0..(count - 1), fn index ->
       {"#{index}", %{"id" => "s#{index}", "action" => "launch", "planet" => "earth"}}
@@ -51,7 +33,7 @@ defmodule FuelCalculator.EdgeCasesTest do
           {"01,000,000,000", 478_481_983}
         ] do
       test "reads #{inspect(raw)}" do
-        params = params(unquote(raw), "land earth")
+        params = form_params(unquote(raw), "land earth")
 
         evaluation = FuelCalculator.evaluate(params)
 
@@ -71,7 +53,7 @@ defmodule FuelCalculator.EdgeCasesTest do
           {",28801", @whole_kilograms}
         ] do
       test "rejects #{inspect(raw)}" do
-        params = params(unquote(raw), "land earth")
+        params = form_params(unquote(raw), "land earth")
 
         evaluation = FuelCalculator.evaluate(params)
 
@@ -82,7 +64,7 @@ defmodule FuelCalculator.EdgeCasesTest do
 
     test "rejects a value too long to be a mass instead of cutting it short" do
       for raw <- [String.duplicate("0", 31) <> "28801", String.duplicate("9", 100)] do
-        evaluation = FuelCalculator.evaluate(params(raw, "land earth"))
+        evaluation = FuelCalculator.evaluate(form_params(raw, "land earth"))
 
         assert %Evaluation{report: nil, error: error} = evaluation
 
@@ -94,7 +76,7 @@ defmodule FuelCalculator.EdgeCasesTest do
     end
 
     test "reads a mass padded with spaces past the length limit" do
-      params = params(String.duplicate(" ", 30) <> "28801", "land earth")
+      params = form_params(String.duplicate(" ", 30) <> "28801", "land earth")
 
       evaluation = FuelCalculator.evaluate(params)
 
@@ -102,7 +84,7 @@ defmodule FuelCalculator.EdgeCasesTest do
     end
 
     test "asks for a mass when a tampered request sends a number instead of text" do
-      params = params(28_801, "land earth")
+      params = form_params(28_801, "land earth")
 
       evaluation = FuelCalculator.evaluate(params)
 
@@ -119,14 +101,14 @@ defmodule FuelCalculator.EdgeCasesTest do
     test "accepts exactly 20 steps sent as an indexed map" do
       evaluation = FuelCalculator.evaluate(%{"mass" => "1000", "steps" => indexed_steps(20)})
 
-      assert %Evaluation{error: nil, step_ids: step_ids} = evaluation
-      assert length(step_ids) == 20
+      assert %Evaluation{error: nil} = evaluation
+      assert length(Evaluation.step_ids(evaluation)) == 20
     end
 
     test "rejects 21 steps sent as an indexed map" do
       evaluation = FuelCalculator.evaluate(%{"mass" => "1000", "steps" => indexed_steps(21)})
 
-      assert %Evaluation{error: error, step_ids: []} = evaluation
+      assert %Evaluation{error: error, rows: []} = evaluation
 
       assert error ==
                InvalidMission.new([
@@ -139,7 +121,8 @@ defmodule FuelCalculator.EdgeCasesTest do
 
       evaluation = FuelCalculator.evaluate(params)
 
-      assert %Evaluation{error: nil, step_ids: [id]} = evaluation
+      assert %Evaluation{error: nil} = evaluation
+      assert [id] = Evaluation.step_ids(evaluation)
       assert is_binary(id)
     end
 
@@ -148,19 +131,9 @@ defmodule FuelCalculator.EdgeCasesTest do
 
       evaluation = FuelCalculator.evaluate(%{"mass" => "1000", "steps" => [step, step]})
 
-      assert %Evaluation{error: nil, step_ids: ["same", other]} = evaluation
+      assert %Evaluation{error: nil} = evaluation
+      assert ["same", other] = Evaluation.step_ids(evaluation)
       assert other != "same"
-    end
-
-    test "keeps index gaps in order" do
-      steps = %{
-        "0" => %{"id" => "a", "action" => "launch", "planet" => "earth"},
-        "5" => %{"id" => "b", "action" => "land", "planet" => "moon"}
-      }
-
-      evaluation = FuelCalculator.evaluate(%{"mass" => "1000", "steps" => steps})
-
-      assert %Evaluation{step_ids: ["a", "b"], error: nil} = evaluation
     end
 
     test "hides warnings while any step is invalid, so positions can't drift" do
@@ -175,7 +148,8 @@ defmodule FuelCalculator.EdgeCasesTest do
 
       evaluation = FuelCalculator.evaluate(params)
 
-      assert %Evaluation{warnings: [], step_ids: ["a", "b", "c"]} = evaluation
+      assert Evaluation.warnings(evaluation) == []
+      assert Evaluation.step_ids(evaluation) == ["a", "b", "c"]
     end
 
     test "suggests the next step from the last valid step" do
@@ -196,25 +170,25 @@ defmodule FuelCalculator.EdgeCasesTest do
 
   describe "editing at the edges" do
     test "inserts missing steps that exactly fill the path" do
-      params = params("1000", Enum.map_join(1..18, ", ", fn _n -> "land earth" end))
+      params = form_params("1000", repeated("land earth", 18))
 
       updated =
         FuelCalculator.insert_steps_before(params, "step-5", steps("launch earth, land moon"))
 
-      assert length(step_ids(updated)) == 20
-      assert Enum.slice(step_ids(updated), 7, 13) == Enum.map(5..17, &"step-#{&1}")
+      assert length(form_step_ids(updated)) == 20
+      assert Enum.slice(form_step_ids(updated), 7, 13) == Enum.map(5..17, &"step-#{&1}")
     end
 
     test "adds a step to a path with 19 steps" do
-      params = params("1000", Enum.map_join(1..19, ", ", fn _n -> "land earth" end))
+      params = form_params("1000", repeated("land earth", 19))
 
-      updated = FuelCalculator.add_step(params)
+      updated = FuelCalculator.add_step(params, step("land earth"))
 
-      assert length(step_ids(updated)) == 20
+      assert length(form_step_ids(updated)) == 20
     end
 
     test "leaves the params unchanged when replacing an unknown step" do
-      params = params("28801", "launch earth, land moon")
+      params = form_params("28801", "launch earth, land moon")
 
       updated = FuelCalculator.replace_step(params, "nope", step("land mars"))
 
@@ -233,7 +207,7 @@ defmodule FuelCalculator.EdgeCasesTest do
 
       updated = FuelCalculator.move_step(params, "c", :up)
 
-      assert step_ids(updated) == ["a", "c", "b"]
+      assert form_step_ids(updated) == ["a", "c", "b"]
     end
 
     test "a preset reuses only usable ids from the current params" do
@@ -241,7 +215,7 @@ defmodule FuelCalculator.EdgeCasesTest do
 
       params = FuelCalculator.preset_params(:apollo_11, current)
 
-      assert [fresh, "keep", "apollo_11-3", "apollo_11-4"] = step_ids(params)
+      assert [fresh, "keep", "apollo_11-3", "apollo_11-4"] = form_step_ids(params)
       assert is_binary(fresh)
 
       assert %Evaluation{report: %FuelReport{total_fuel_kg: 51_898}} =
@@ -251,15 +225,16 @@ defmodule FuelCalculator.EdgeCasesTest do
 
   describe "evaluation at the limits" do
     test "flags the path even when the mass is out of range, on the right step" do
-      params = params("1,000,000,001", "land moon, land moon")
+      params = form_params("1,000,000,001", "land moon, land moon")
 
       evaluation = FuelCalculator.evaluate(params)
 
-      assert %Evaluation{report: nil, warnings: [%PathWarning{step_index: 1}]} = evaluation
+      assert %Evaluation{report: nil} = evaluation
+      assert [%PathWarning{step_index: 1}] = Evaluation.warnings(evaluation)
     end
 
     test "calculates the heaviest allowed mission exactly" do
-      mission = mission(1_000_000_000, Enum.map_join(1..20, ", ", fn _n -> "launch earth" end))
+      mission = mission(1_000_000_000, repeated("launch earth", 20))
 
       report = FuelCalculator.fuel_report(mission)
 
@@ -284,7 +259,7 @@ defmodule FuelCalculator.EdgeCasesTest do
 
       for edited <- [
             params,
-            FuelCalculator.add_step(params),
+            FuelCalculator.add_step(params, step("launch earth")),
             FuelCalculator.remove_step(params, id),
             FuelCalculator.move_step(params, id, :up),
             FuelCalculator.replace_step(params, id, step("land moon")),
