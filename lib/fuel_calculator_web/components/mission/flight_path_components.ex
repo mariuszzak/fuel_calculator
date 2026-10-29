@@ -6,14 +6,17 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
 
   use FuelCalculatorWeb, :html
 
+  import FuelCalculatorWeb.Mission.ErrorComponents
   import FuelCalculatorWeb.Mission.NumberComponents
   import FuelCalculatorWeb.Mission.PathWarningComponents
   import FuelCalculatorWeb.Mission.SpineComponents
 
+  alias FuelCalculator.Error.FieldError
+  alias FuelCalculator.Error.InvalidMission
   alias FuelCalculator.Evaluation
+  alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FlightStep
   alias FuelCalculator.FuelReport
-  alias FuelCalculator.PathWarning
   alias FuelCalculator.Planet
   alias FuelCalculator.StepFuel
   alias FuelCalculatorWeb.Format
@@ -25,10 +28,16 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   attr :selected_step_id, :string, default: nil
 
   def flight_path(assigns) do
-    %Evaluation{report: report, step_ids: step_ids} = assigns.evaluation
+    %Evaluation{report: report, rows: rows, error: error} = assigns.evaluation
 
     assigns =
-      assign(assigns, count: length(step_ids), arcs: arcs(report), max_fuel: max_fuel(report))
+      assign(assigns,
+        count: length(rows),
+        rows: rows,
+        arcs: arcs(report, rows),
+        max_fuel: max_fuel(report),
+        path_errors: path_errors(error)
+      )
 
     ~H"""
     <section
@@ -40,17 +49,21 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         <.inputs_for :let={step} field={@field} skip_persistent_id>
           <.step_row
             step={step}
+            row={Enum.at(@rows, step.index)}
             count={@count}
             limit={@evaluation.step_limit}
-            fuel={step_fuel(@evaluation, step.index)}
-            warning={step_warning(@evaluation, step.index)}
-            arc={@arcs && Enum.at(@arcs, step.index)}
+            arc={Enum.at(@arcs, step.index)}
             max_fuel={@max_fuel}
             selected={step[:id].value == @selected_step_id}
           />
         </.inputs_for>
       </ol>
-      <.empty_path :if={@count == 0} />
+      <.field_error
+        :for={{message, index} <- Enum.with_index(@path_errors)}
+        id={"path-error-#{index}"}
+        message={message}
+      />
+      <.empty_path :if={@count == 0 and @path_errors == []} />
       <.add_step_button
         next_step={@evaluation.next_step}
         count={@count}
@@ -60,15 +73,21 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
     """
   end
 
-  defp step_warning(%Evaluation{warnings: warnings}, index),
-    do: Enum.find(warnings, &match?(%PathWarning{step_index: ^index}, &1))
+  # Sized by fuel once calculated; until then, thin arcs for the steps that are valid.
+  defp arcs(%FuelReport{steps: steps}, _rows), do: Spine.for_steps(steps)
 
-  # Per-step results exist only when the whole mission is valid.
-  defp step_fuel(%Evaluation{report: %FuelReport{steps: steps}}, index), do: Enum.at(steps, index)
-  defp step_fuel(%Evaluation{report: nil}, _index), do: nil
+  defp arcs(nil, rows) do
+    Enum.map(rows, fn
+      %Row{step: %FlightStep{} = step} -> Spine.placeholder(step)
+      %Row{step: nil} -> nil
+    end)
+  end
 
-  defp arcs(%FuelReport{steps: steps}), do: Spine.for_steps(steps)
-  defp arcs(nil), do: nil
+  # Errors about the path as a whole (e.g. too many steps), not one step.
+  defp path_errors(%InvalidMission{errors: errors}),
+    do: for(%FieldError{path: [:steps], message: message} <- errors, do: message)
+
+  defp path_errors(nil), do: []
 
   # Fuel bars are scaled to the step needing the most fuel.
   defp max_fuel(%FuelReport{steps: steps}),
@@ -125,16 +144,24 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
   end
 
   attr :step, Phoenix.HTML.Form, required: true, doc: "the step's nested form"
+  attr :row, Row, required: true
   attr :count, :integer, required: true
   attr :limit, :integer, required: true
-  attr :fuel, StepFuel, default: nil
-  attr :warning, PathWarning, default: nil
   attr :arc, Spine, default: nil
   attr :max_fuel, :integer, required: true
   attr :selected, :boolean, default: false
 
   defp step_row(assigns) do
-    assigns = assign(assigns, id: assigns.step[:id].value, index: assigns.step.index)
+    %Row{id: id, fuel: fuel, warning: warning, errors: errors} = assigns.row
+
+    assigns =
+      assign(assigns,
+        id: id,
+        index: assigns.step.index,
+        fuel: fuel,
+        warning: warning,
+        errors: errors
+      )
 
     ~H"""
     <li
@@ -164,6 +191,11 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
           <.step_buttons id={@id} index={@index} count={@count} />
           <.step_menu id={@id} index={@index} count={@count} />
         </div>
+        <.field_error
+          :for={{message, index} <- Enum.with_index(@errors)}
+          id={"step-#{@id}-error-#{index}"}
+          message={message}
+        />
         <.mass_at_burn :if={@fuel} id={@id} fuel={@fuel} index={@index} count={@count} />
         <.path_warning :if={@warning} warning={@warning} step_id={@id} room={@limit - @count} />
         <.fuel_chain :if={@selected && @fuel} fuel={@fuel} />

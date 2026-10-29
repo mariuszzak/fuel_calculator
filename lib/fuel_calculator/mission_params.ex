@@ -96,6 +96,18 @@ defmodule FuelCalculator.MissionParams do
   end
 
   @doc false
+  # Every submitted step in order: the validated step, or nil while it's invalid.
+  @spec steps_by_position(Ecto.Changeset.t()) :: [FlightStep.t() | nil]
+  def steps_by_position(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> get_embed(:steps, :changeset)
+    |> Enum.map(fn
+      %Ecto.Changeset{valid?: true} = step -> step |> apply_changes() |> to_flight_step()
+      %Ecto.Changeset{valid?: false} -> nil
+    end)
+  end
+
+  @doc false
   # The submitted step ids in order, including steps that are otherwise invalid.
   @spec step_ids(Ecto.Changeset.t()) :: [String.t() | nil]
   def step_ids(%Ecto.Changeset{} = changeset) do

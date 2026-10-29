@@ -249,6 +249,18 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
       refute has_element?(view, ~s{#steps > li:nth-child(2) [style="transform: scaleX(1.0)"]})
     end
 
+    test "keeps thin arcs while the mass is invalid", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      view |> form("#mission-form", mission: %{mass: ""}) |> render_change()
+
+      assert render(view)
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("#steps svg path")
+             |> Enum.count() ==
+               4
+    end
+
     test "draws an arc for every step", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/")
 
@@ -360,6 +372,38 @@ defmodule FuelCalculatorWeb.MissionLiveTest do
     |> LazyHTML.from_fragment()
     |> LazyHTML.query("#steps > li")
     |> Enum.flat_map(&LazyHTML.attribute(&1, "id"))
+  end
+
+  describe "tampered steps" do
+    test "explain an unknown planet on the step it belongs to", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      [first_id | _rest] = row_ids(view)
+
+      render_change(view, "validate", %{
+        "mission" => %{
+          "mass" => "28801",
+          "steps" => %{
+            "0" => %{
+              "id" => String.replace_prefix(first_id, "step-", ""),
+              "action" => "launch",
+              "planet" => "pluto"
+            }
+          }
+        }
+      })
+
+      assert has_element?(view, "##{first_id} .text-error", "Choose Earth, Moon or Mars.")
+    end
+
+    test "explain the step limit when more than 20 steps are sent", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      steps = Map.new(0..20, &{"#{&1}", %{"action" => "launch", "planet" => "earth"}})
+
+      render_change(view, "validate", %{"mission" => %{"mass" => "28801", "steps" => steps}})
+
+      assert has_element?(view, "#path-error-0", "A flight path holds up to 20 steps.")
+      refute has_element?(view, "#no-steps")
+    end
   end
 
   describe "a warning near the step limit" do

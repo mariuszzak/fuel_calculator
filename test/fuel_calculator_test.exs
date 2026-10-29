@@ -7,9 +7,11 @@ defmodule FuelCalculatorTest do
   alias FuelCalculator.Error.FieldError
   alias FuelCalculator.Error.InvalidMission
   alias FuelCalculator.Evaluation
+  alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FuelReport
   alias FuelCalculator.Mission
   alias FuelCalculator.PathWarning
+  alias FuelCalculator.StepFuel
 
   defp params(mass, path) do
     steps =
@@ -218,6 +220,53 @@ defmodule FuelCalculatorTest do
       assert error ==
                InvalidMission.new([
                  FieldError.new([:steps], "A flight path holds up to 20 steps.")
+               ])
+    end
+  end
+
+  describe "one row per step" do
+    test "carries each step's id, step, fuel and warning in flight order" do
+      params = params("28801", "launch earth, land moon, launch mars")
+
+      evaluation = FuelCalculator.evaluate(params)
+
+      assert %Evaluation{rows: [first, second, third]} = evaluation
+      assert %Row{id: "step-0", step: step_0, fuel: %StepFuel{}, warning: nil, errors: []} = first
+      assert step_0 == step("launch earth")
+      assert %Row{id: "step-1", fuel: %StepFuel{}, warning: nil, errors: []} = second
+      assert %Row{id: "step-2", fuel: %StepFuel{}, warning: %PathWarning{step_index: 2}} = third
+    end
+
+    test "has no fuel while the mass is invalid, but keeps the steps" do
+      params = params("", "launch earth, land moon")
+
+      evaluation = FuelCalculator.evaluate(params)
+
+      assert %Evaluation{rows: [%Row{fuel: nil, step: first}, %Row{fuel: nil, step: second}]} =
+               evaluation
+
+      assert [first, second] == steps("launch earth, land moon")
+    end
+
+    test "puts each step's messages on its own row" do
+      params = %{
+        "mass" => "1000",
+        "steps" => [
+          %{"id" => "a", "action" => "launch", "planet" => "earth"},
+          %{"id" => "b", "action" => "dock", "planet" => "pluto"}
+        ]
+      }
+
+      evaluation = FuelCalculator.evaluate(params)
+
+      assert %Evaluation{rows: [first, second]} = evaluation
+      assert %Row{id: "a", errors: [], fuel: nil} = first
+      assert first.step == step("launch earth")
+
+      assert second ==
+               Row.new("b", nil, nil, nil, [
+                 "Choose launch or land.",
+                 "Choose Earth, Moon or Mars."
                ])
     end
   end

@@ -9,8 +9,10 @@ defmodule FuelCalculator do
   evaluated again.
   """
 
+  alias FuelCalculator.Error.FieldError
   alias FuelCalculator.Error.InvalidMission
   alias FuelCalculator.Evaluation
+  alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FlightPath
   alias FuelCalculator.FlightStep
   alias FuelCalculator.Fuel
@@ -18,6 +20,7 @@ defmodule FuelCalculator do
   alias FuelCalculator.Mission
   alias FuelCalculator.MissionParams
   alias FuelCalculator.ParamsEditor
+  alias FuelCalculator.PathWarning
   alias FuelCalculator.Preset
   alias FuelCalculator.RawParams
 
@@ -59,13 +62,59 @@ defmodule FuelCalculator do
     Evaluation.new(
       params,
       Map.put(changeset, :action, :validate),
-      MissionParams.step_ids(changeset),
       steps,
       result,
       warnings,
       FlightPath.next_step(steps),
-      MissionParams.step_limit()
+      MissionParams.step_limit(),
+      rows(
+        MissionParams.step_ids(changeset),
+        MissionParams.steps_by_position(changeset),
+        result,
+        warnings
+      )
     )
+  end
+
+  # One row per submitted step. Fuel exists only when the whole mission is valid
+  # and warnings only when every step is, so in both cases positions line up.
+  defp rows(step_ids, steps, result, warnings) do
+    fuels =
+      case result do
+        {:ok, %FuelReport{steps: step_fuels}} -> step_fuels
+        {:error, %InvalidMission{}} -> []
+      end
+
+    step_errors =
+      case result do
+        {:ok, %FuelReport{}} -> %{}
+        {:error, %InvalidMission{errors: errors}} -> errors_by_step(errors)
+      end
+
+    [step_ids, steps]
+    |> Enum.zip()
+    |> Enum.with_index()
+    |> Enum.map(fn {{id, step}, index} ->
+      Row.new(
+        id,
+        step,
+        Enum.at(fuels, index),
+        Enum.find(warnings, &match?(%PathWarning{step_index: ^index}, &1)),
+        Map.get(step_errors, index, [])
+      )
+    end)
+  end
+
+  defp errors_by_step(errors) do
+    errors
+    |> Enum.flat_map(fn
+      %FieldError{path: [:steps, index | _field], message: message} when is_integer(index) ->
+        [{index, message}]
+
+      %FieldError{} ->
+        []
+    end)
+    |> Enum.group_by(fn {index, _message} -> index end, fn {_index, message} -> message end)
   end
 
   @doc "Turns mission params into a validated mission."

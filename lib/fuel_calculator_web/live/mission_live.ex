@@ -13,6 +13,8 @@ defmodule FuelCalculatorWeb.MissionLive do
   import FuelCalculatorWeb.Mission.UndoComponents
 
   alias FuelCalculator.Evaluation
+  alias FuelCalculator.Evaluation.Row
+  alias FuelCalculator.FlightStep
   alias FuelCalculator.PathWarning
   alias FuelCalculator.Preset
   alias FuelCalculatorWeb.Format
@@ -233,18 +235,17 @@ defmodule FuelCalculatorWeb.MissionLive do
 
   defp offer_preset_undo(socket, _preset_id), do: socket
 
-  defp removal_label(%Evaluation{step_ids: step_ids, steps: steps}, id) do
-    case Enum.find_index(step_ids, &(&1 == id)) do
-      nil ->
-        nil
-
-      index when length(steps) == length(step_ids) ->
-        "Removed step #{index + 1}: #{Format.step(Enum.at(steps, index))}"
-
-      index ->
-        "Removed step #{index + 1}"
+  defp removal_label(%Evaluation{rows: rows}, id) do
+    case Enum.find_index(rows, &match?(%Row{id: ^id}, &1)) do
+      nil -> nil
+      index -> removal_label(Enum.at(rows, index), index)
     end
   end
+
+  defp removal_label(%Row{step: %FlightStep{} = step}, index),
+    do: "Removed step #{index + 1}: #{Format.step(step)}"
+
+  defp removal_label(%Row{step: nil}, index), do: "Removed step #{index + 1}"
 
   defp load_preset(socket, preset_id) do
     socket
@@ -284,13 +285,10 @@ defmodule FuelCalculatorWeb.MissionLive do
   defp direction("down"), do: {:ok, :down}
   defp direction(_unknown), do: :error
 
-  defp step_warning(%Evaluation{warnings: warnings}, index),
-    do: Enum.find(warnings, &match?(%PathWarning{step_index: ^index}, &1))
-
-  defp warning_for(%Evaluation{step_ids: step_ids} = evaluation, id) do
-    case Enum.find_index(step_ids, &(&1 == id)) do
+  defp warning_for(%Evaluation{rows: rows}, id) do
+    case Enum.find(rows, &match?(%Row{id: ^id}, &1)) do
+      %Row{warning: warning} -> warning
       nil -> nil
-      index -> step_warning(evaluation, index)
     end
   end
 end

@@ -11,6 +11,7 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
   alias FuelCalculator.Error.FieldError
   alias FuelCalculator.Error.InvalidMission
   alias FuelCalculator.Evaluation
+  alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FuelReport
   alias FuelCalculator.PathWarning
   alias FuelCalculatorWeb.Format
@@ -55,12 +56,12 @@ defmodule FuelCalculatorWeb.Mission.SummaryComponents do
     """
   end
 
-  defp first_warning_step_id(
-         %Evaluation{warnings: [%PathWarning{step_index: index} | _rest]} = e
-       ),
-       do: Enum.at(e.step_ids, index)
-
-  defp first_warning_step_id(%Evaluation{warnings: []}), do: nil
+  defp first_warning_step_id(%Evaluation{rows: rows}) do
+    case Enum.find(rows, &match?(%Row{warning: %PathWarning{}}, &1)) do
+      %Row{id: id} -> id
+      nil -> nil
+    end
+  end
 
   defp announcement(%FuelReport{total_fuel_kg: total}),
     do: "Total fuel required: #{Format.number(total)} kilograms"

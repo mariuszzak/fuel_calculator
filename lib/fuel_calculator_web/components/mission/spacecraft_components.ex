@@ -5,6 +5,8 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
 
   use FuelCalculatorWeb, :html
 
+  import FuelCalculatorWeb.Mission.ErrorComponents
+
   alias FuelCalculator.Preset
   alias FuelCalculatorWeb.Format
 
@@ -108,18 +110,6 @@ defmodule FuelCalculatorWeb.Mission.SpacecraftComponents do
   end
 
   defp visible_error(%Phoenix.HTML.FormField{errors: []}), do: nil
-
-  attr :id, :string, required: true
-  attr :message, :string, required: true
-
-  defp field_error(assigns) do
-    ~H"""
-    <p id={@id} class="motion-fade flex items-center gap-2 text-sm text-error">
-      <.icon name="hero-x-circle" class="size-4 shrink-0" />
-      {@message}
-    </p>
-    """
-  end
 
   @doc "One-click example missions. The active one is marked once it's edited."
   attr :presets, :list, required: true

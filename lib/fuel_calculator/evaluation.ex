@@ -13,9 +13,12 @@ defmodule FuelCalculator.Evaluation do
       warning's `step_index` always matches the same position in `step_ids`
     * `next_step` - the suggested next step for "Add step"
     * `step_limit` - the most steps a flight path may hold
+    * `rows` - one `Row` per submitted step with its step, fuel, warning and
+      errors; render steps from these instead of matching lists by position
   """
 
   alias FuelCalculator.Error.InvalidMission
+  alias FuelCalculator.Evaluation.Row
   alias FuelCalculator.FlightStep
   alias FuelCalculator.FuelReport
   alias FuelCalculator.PathWarning
@@ -29,46 +32,48 @@ defmodule FuelCalculator.Evaluation do
     :error,
     :warnings,
     :next_step,
-    :step_limit
+    :step_limit,
+    :rows
   ]
   defstruct @enforce_keys
 
   @type t :: %__MODULE__{
           params: FuelCalculator.params(),
           changeset: Ecto.Changeset.t(),
-          step_ids: [String.t() | nil],
+          step_ids: [String.t()],
           steps: [FlightStep.t()],
           report: FuelReport.t() | nil,
           error: InvalidMission.t() | nil,
           warnings: [PathWarning.t()],
           next_step: FlightStep.t(),
-          step_limit: pos_integer()
+          step_limit: pos_integer(),
+          rows: [Row.t()]
         }
 
   @doc "Builds the evaluation; exactly one of `report` and `error` is set."
   @spec new(
           FuelCalculator.params(),
           Ecto.Changeset.t(),
-          [String.t() | nil],
           [FlightStep.t()],
           {:ok, FuelReport.t()} | {:error, InvalidMission.t()},
           [PathWarning.t()],
           FlightStep.t(),
-          pos_integer()
+          pos_integer(),
+          [Row.t()]
         ) :: t()
   def new(
         params,
         %Ecto.Changeset{} = changeset,
-        step_ids,
         steps,
         result,
         warnings,
         %FlightStep{} = next_step,
-        step_limit
+        step_limit,
+        rows
       )
-      when is_map(params) and is_list(step_ids) and is_list(steps) and is_list(warnings) and
+      when is_map(params) and is_list(steps) and is_list(warnings) and
              is_integer(step_limit) and
-             step_limit > 0 do
+             step_limit > 0 and is_list(rows) do
     {report, error} =
       case result do
         {:ok, %FuelReport{} = report} -> {report, nil}
@@ -78,13 +83,14 @@ defmodule FuelCalculator.Evaluation do
     %__MODULE__{
       params: params,
       changeset: changeset,
-      step_ids: step_ids,
+      step_ids: Enum.map(rows, fn %Row{id: id} -> id end),
       steps: steps,
       report: report,
       error: error,
       warnings: warnings,
       next_step: next_step,
-      step_limit: step_limit
+      step_limit: step_limit,
+      rows: rows
     }
   end
 end
