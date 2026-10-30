@@ -94,152 +94,165 @@ defmodule FuelCalculatorWeb.MissionLive do
   # through explicit clauses.
 
   @impl Phoenix.LiveView
-  def handle_event("validate", %{"mission" => params}, socket) when is_map(params) do
-    {:noreply, put_params(socket, params)}
-  end
+  def handle_event("validate", %{"mission" => params}, socket) when is_map(params),
+    do: {:noreply, put_params(socket, params)}
 
-  # The id is matched against the presets on offer, never turned into an atom.
-  def handle_event("load_preset", %{"id" => id}, socket) when is_binary(id) do
-    case Enum.find(socket.assigns.presets, &(Atom.to_string(&1.id) == id)) do
-      %Preset{} = preset ->
-        {:noreply, socket |> offer_preset_undo(preset) |> load_preset(preset.id)}
+  def handle_event("load_preset", %{"id" => id}, socket) when is_binary(id),
+    do: {:noreply, switch_preset(socket, id)}
 
-      nil ->
-        {:noreply, socket}
-    end
-  end
+  def handle_event("add_step", _params, socket), do: {:noreply, add_step(socket)}
 
-  def handle_event("add_step", _params, socket) do
-    %Evaluation{next_step: %FlightStep{} = next_step} = socket.assigns.evaluation
-    {:noreply, edit(socket, &FuelCalculator.add_step(&1, next_step))}
-  end
+  def handle_event("remove_step", %{"id" => id}, socket) when is_binary(id),
+    do: {:noreply, remove_step(socket, id)}
 
-  def handle_event("remove_step", %{"id" => id}, socket) when is_binary(id) do
-    case removal_label(socket.assigns.evaluation, id) do
-      nil ->
-        {:noreply, socket}
+  def handle_event("move_step", %{"id" => id, "direction" => "up"}, socket) when is_binary(id),
+    do: {:noreply, move_step(socket, id, :up)}
 
-      label ->
-        {:noreply,
-         socket
-         |> remember_for_undo(label)
-         |> edit(&FuelCalculator.remove_step(&1, id))
-         |> focus(["undo-button"])}
-    end
-  end
+  def handle_event("move_step", %{"id" => id, "direction" => "down"}, socket)
+      when is_binary(id),
+      do: {:noreply, move_step(socket, id, :down)}
 
-  def handle_event("move_step", %{"id" => id, "direction" => direction}, socket)
-      when is_binary(id) do
-    case {direction(direction), Evaluation.has_step?(socket.assigns.evaluation, id)} do
-      {{:ok, direction}, true} ->
-        {:noreply,
-         socket
-         |> edit(&FuelCalculator.move_step(&1, id, direction))
-         |> focus_moved_step(id, direction)}
+  def handle_event("insert_fix", %{"id" => id}, socket) when is_binary(id),
+    do:
+      {:noreply, apply_fix(socket, id, &FuelCalculator.insert_steps_before(&1, id, &2.insertion))}
 
-      {{:ok, _direction}, false} ->
-        {:noreply, socket}
+  def handle_event("replace_fix", %{"id" => id}, socket) when is_binary(id),
+    do: {:noreply, apply_fix(socket, id, &FuelCalculator.replace_step(&1, id, &2.replacement))}
 
-      {:error, _known?} ->
-        {:noreply, socket}
-    end
-  end
+  def handle_event("select_step", %{"id" => id}, socket) when is_binary(id),
+    do: {:noreply, select_step(socket, id)}
 
-  def handle_event("insert_fix", %{"id" => id}, socket) when is_binary(id) do
-    case warning_for(socket.assigns.evaluation, id) do
-      %PathWarning{insertion: steps} ->
-        {:noreply,
-         socket
-         |> edit(&FuelCalculator.insert_steps_before(&1, id, steps))
-         |> focus(["step-number-" <> id])}
+  def handle_event("clear_path", _params, socket), do: {:noreply, clear_path(socket)}
 
-      nil ->
-        {:noreply, socket}
-    end
-  end
-
-  def handle_event("replace_fix", %{"id" => id}, socket) when is_binary(id) do
-    case warning_for(socket.assigns.evaluation, id) do
-      %PathWarning{replacement: step} ->
-        {:noreply,
-         socket
-         |> edit(&FuelCalculator.replace_step(&1, id, step))
-         |> focus(["step-number-" <> id])}
-
-      nil ->
-        {:noreply, socket}
-    end
-  end
-
-  def handle_event("select_step", %{"id" => id}, socket) when is_binary(id) do
-    if Evaluation.has_step?(socket.assigns.evaluation, id),
-      do: {:noreply, assign(socket, selected_step_id: id)},
-      else: {:noreply, socket}
-  end
-
-  def handle_event("clear_path", _params, socket) do
-    case length(socket.assigns.evaluation.rows) do
-      0 ->
-        {:noreply, socket}
-
-      count ->
-        {:noreply,
-         socket
-         |> remember_for_undo("Cleared #{Format.count(count, "step")}")
-         |> edit(&FuelCalculator.clear_steps/1)
-         |> focus(["undo-button"])}
-    end
-  end
-
-  def handle_event("undo", _params, socket) do
-    case socket.assigns.undo do
-      %Undo{params: params, preset_id: preset_id} ->
-        ids_before = Evaluation.step_ids(socket.assigns.evaluation)
-        socket = socket |> assign(undo: nil, preset_id: preset_id) |> put_params(params)
-        restored_ids = Evaluation.step_ids(socket.assigns.evaluation) -- ids_before
-
-        # Focus the first step that came back; otherwise stay near the path.
-        {:noreply, focus(socket, Enum.map(restored_ids, &("step-number-" <> &1)) ++ ["add-step"])}
-
-      nil ->
-        {:noreply, socket}
-    end
-  end
+  def handle_event("undo", _params, socket), do: {:noreply, undo(socket)}
 
   # The toast waits while it's pointed at or focused, then gets a fresh timer.
-  def handle_event("hold_undo", _params, socket) do
-    case socket.assigns.undo do
-      %Undo{} = undo -> {:noreply, assign(socket, undo: Undo.renew(undo))}
-      nil -> {:noreply, socket}
-    end
-  end
-
-  def handle_event("release_undo", _params, socket) do
-    case socket.assigns.undo do
-      %Undo{} = undo -> {:noreply, undo |> Undo.renew() |> start_undo_timer(socket)}
-      nil -> {:noreply, socket}
-    end
-  end
+  def handle_event("hold_undo", _params, socket), do: {:noreply, hold_undo(socket)}
+  def handle_event("release_undo", _params, socket), do: {:noreply, release_undo(socket)}
 
   # Framework boundary: events come from the browser and may be tampered with.
-  # Anything unknown or malformed (e.g. a missing id) is ignored instead of
-  # crashing the LiveView and losing the user's mission.
+  # Anything unknown or malformed (e.g. a missing id or an unknown direction)
+  # is ignored instead of crashing the LiveView and losing the user's mission.
   def handle_event(_unknown_or_malformed_event, _params, socket), do: {:noreply, socket}
 
   @impl Phoenix.LiveView
-  def handle_info({:expire_undo, ref}, socket) do
-    case socket.assigns.undo do
-      # If the toast had focus, its hook moves focus to Add step.
-      %Undo{ref: ^ref} ->
-        {:noreply, assign(socket, undo: nil)}
+  def handle_info({:expire_undo, ref}, socket), do: {:noreply, expire_undo(socket, ref)}
 
-      # A newer undo replaced this one; its own timer will clear it.
-      %Undo{} ->
-        {:noreply, socket}
+  # Actions. Each returns the socket, unchanged when the event doesn't apply
+  # (an unknown preset or step id, nothing to undo).
+
+  # The id is matched against the presets on offer, never turned into an atom.
+  defp switch_preset(socket, id) do
+    case Enum.find(socket.assigns.presets, &(Atom.to_string(&1.id) == id)) do
+      %Preset{} = preset -> socket |> offer_preset_undo(preset) |> load_preset(preset.id)
+      nil -> socket
+    end
+  end
+
+  defp add_step(socket) do
+    %Evaluation{next_step: %FlightStep{} = next_step} = socket.assigns.evaluation
+    edit(socket, &FuelCalculator.add_step(&1, next_step))
+  end
+
+  defp remove_step(socket, id) do
+    case removal_label(socket.assigns.evaluation, id) do
+      nil ->
+        socket
+
+      label ->
+        socket
+        |> remember_for_undo(label)
+        |> edit(&FuelCalculator.remove_step(&1, id))
+        |> focus(["undo-button"])
+    end
+  end
+
+  defp move_step(socket, id, direction) do
+    if Evaluation.has_step?(socket.assigns.evaluation, id) do
+      socket
+      |> edit(&FuelCalculator.move_step(&1, id, direction))
+      |> focus_moved_step(id, direction)
+    else
+      socket
+    end
+  end
+
+  # Applies one of a path warning's fixes (`fix` gets the params and the
+  # warning), then focuses the step that was fixed.
+  defp apply_fix(socket, id, fix) do
+    case warning_for(socket.assigns.evaluation, id) do
+      %PathWarning{} = warning ->
+        socket
+        |> edit(&fix.(&1, warning))
+        |> focus(["step-number-" <> id])
 
       nil ->
-        {:noreply, socket}
+        socket
     end
+  end
+
+  defp select_step(socket, id) do
+    if Evaluation.has_step?(socket.assigns.evaluation, id),
+      do: assign(socket, selected_step_id: id),
+      else: socket
+  end
+
+  defp clear_path(socket) do
+    case length(socket.assigns.evaluation.rows) do
+      0 ->
+        socket
+
+      count ->
+        socket
+        |> remember_for_undo("Cleared #{Format.count(count, "step")}")
+        |> edit(&FuelCalculator.clear_steps/1)
+        |> focus(["undo-button"])
+    end
+  end
+
+  defp undo(socket) do
+    case socket.assigns.undo do
+      %Undo{params: params, preset_id: preset_id} ->
+        ids_before = Evaluation.step_ids(socket.assigns.evaluation)
+
+        socket
+        |> assign(undo: nil, preset_id: preset_id)
+        |> put_params(params)
+        |> focus_restored_step(ids_before)
+
+      nil ->
+        socket
+    end
+  end
+
+  defp hold_undo(socket) do
+    case socket.assigns.undo do
+      %Undo{} = undo -> assign(socket, undo: Undo.renew(undo))
+      nil -> socket
+    end
+  end
+
+  defp release_undo(socket) do
+    case socket.assigns.undo do
+      %Undo{} = undo -> undo |> Undo.renew() |> start_undo_timer(socket)
+      nil -> socket
+    end
+  end
+
+  defp expire_undo(socket, ref) do
+    case socket.assigns.undo do
+      # If the toast had focus, its hook moves focus to Add step.
+      %Undo{ref: ^ref} -> assign(socket, undo: nil)
+      # A newer undo replaced this one; its own timer will clear it.
+      %Undo{} -> socket
+      nil -> socket
+    end
+  end
+
+  # Focus the first step that came back; otherwise stay near the path.
+  defp focus_restored_step(socket, ids_before) do
+    restored_ids = Evaluation.step_ids(socket.assigns.evaluation) -- ids_before
+    focus(socket, Enum.map(restored_ids, &("step-number-" <> &1)) ++ ["add-step"])
   end
 
   # Asks the browser to focus the first of `ids` that is visible (e.g. a desktop
@@ -323,10 +336,6 @@ defmodule FuelCalculatorWeb.MissionLive do
   defp keep_selection(selected_id, step_ids) do
     if selected_id in step_ids, do: selected_id, else: List.first(step_ids)
   end
-
-  defp direction("up"), do: {:ok, :up}
-  defp direction("down"), do: {:ok, :down}
-  defp direction(_unknown), do: :error
 
   defp warning_for(%Evaluation{rows: rows}, id) do
     case Enum.find(rows, &match?(%Row{id: ^id}, &1)) do

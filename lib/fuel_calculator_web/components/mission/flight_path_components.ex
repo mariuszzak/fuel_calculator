@@ -193,6 +193,7 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
         index: assigns.step.index,
         fuel: fuel,
         warning: warning,
+        warned: warning != nil,
         errors: errors
       )
 
@@ -212,13 +213,13 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
       ]}
     >
       <div class="shrink-0 pt-4 sm:pl-1">
-        <.step_number id={@id} index={@index} selected={@selected} warned={@warning != nil} />
+        <.step_number id={@id} index={@index} selected={@selected} warned={@warned} />
       </div>
       <.spine_column
         arc={@arc}
         planet={planet_id(@step[:planet].value)}
         selected={@selected}
-        warned={@warning != nil}
+        warned={@warned}
       />
       <%!-- Phones: the choices and fuel sit beside the step number and the details
            below use the row's full width. Wider screens: one column beside the spine. --%>
@@ -233,21 +234,19 @@ defmodule FuelCalculatorWeb.Mission.FlightPathComponents do
           <.step_buttons id={@id} index={@index} count={@count} />
           <.step_menu id={@id} index={@index} count={@count} />
         </div>
+        <%!-- Step details. On phones they span the row under the step number
+             (top padding only when there are any); wider screens flow them
+             into the column above. --%>
         <div class="col-span-2 flex flex-col gap-2 has-[*]:pt-2 sm:contents">
           <.field_error
             :for={{error, index} <- Enum.with_index(@errors)}
             id={"step-#{@id}-error-#{index}"}
             message={ErrorMessages.text(error)}
-          /><.mass_at_burn :if={@fuel} id={@id} fuel={@fuel} index={@index} count={@count} /><.no_fuel_needed
-            :if={@fuel && @fuel.fuel_kg == 0}
-            id={"no-fuel-#{@id}"}
-            fuel={@fuel}
-          /><.path_warning
-            :if={@warning}
-            warning={@warning}
-            step_id={@id}
-            room={@room}
-          /><.fuel_chain :if={@selected && @fuel} id={"fuel-chain-#{@id}"} fuel={@fuel} />
+          />
+          <.mass_at_burn :if={@fuel} id={@id} fuel={@fuel} index={@index} count={@count} />
+          <.no_fuel_needed :if={@fuel && @fuel.fuel_kg == 0} id={"no-fuel-#{@id}"} fuel={@fuel} />
+          <.path_warning :if={@warning} warning={@warning} step_id={@id} room={@room} />
+          <.fuel_chain :if={@selected && @fuel} id={"fuel-chain-#{@id}"} fuel={@fuel} />
         </div>
       </div>
     </li>
