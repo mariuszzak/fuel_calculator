@@ -14,6 +14,12 @@ three of the spec's missions to the kilogram.
   <img src="docs/screenshots/desktop-light.png" alt="The mission planner with the Apollo 11 example: 28,801 kg of equipment, 51,898 kg of fuel in total, and four steps on the flight spine. The first step, launch from Earth, is selected and shows its fuel chain.">
 </picture>
 
+In action: loading a preset, typing a mass, opening a step's fuel chain,
+adding a step, fixing a path warning, undoing a removal and switching to the
+dark theme.
+
+![A 26-second demo of the mission planner](docs/demo.gif)
+
 ## Features
 
 - **Live total.** Fuel, wet mass (ship + fuel), mass ratio and route update
