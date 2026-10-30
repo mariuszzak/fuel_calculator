@@ -66,23 +66,14 @@ defmodule FuelCalculator do
   def evaluate(params) when is_map(params) do
     params = RawParams.normalize(params)
     changeset = MissionParams.changeset(params)
-    steps_by_position = MissionParams.steps_by_position(changeset)
-    steps = Enum.reject(steps_by_position, &is_nil/1)
-
-    result =
-      case MissionParams.to_mission(changeset) do
-        {:ok, %Mission{} = mission} -> {:ok, Fuel.for_mission(mission)}
-        {:error, %InvalidMission{} = error} -> {:error, error}
-      end
-
-    warnings = if MissionParams.steps_valid?(changeset), do: FlightPath.warnings(steps), else: []
-
-    rows = rows(MissionParams.step_ids(changeset), steps_by_position, result, warnings)
+    submitted = MissionParams.submitted_steps(changeset)
+    steps = for {_id, %FlightStep{} = step} <- submitted, do: step
+    result = calculate(changeset)
 
     Evaluation.new(
       params,
-      %{changeset | action: :validate},
-      rows,
+      changeset,
+      rows(submitted, result, path_warnings(submitted, steps)),
       steps,
       result,
       FlightPath.next_step(steps),
@@ -90,26 +81,39 @@ defmodule FuelCalculator do
     )
   end
 
+  defp calculate(changeset) do
+    case MissionParams.to_mission(changeset) do
+      {:ok, %Mission{} = mission} -> {:ok, Fuel.for_mission(mission)}
+      {:error, %InvalidMission{}} = error -> error
+    end
+  end
+
+  # Warnings point at steps by position, so they're only worked out when every
+  # submitted step is valid (otherwise a position could name the wrong step).
+  defp path_warnings(submitted, steps) when length(submitted) == length(steps),
+    do: FlightPath.warnings(steps)
+
+  defp path_warnings(_submitted_with_invalid_steps, _valid_steps), do: []
+
   # One row per submitted step. Fuel exists only when the whole mission is valid
-  # (one per step) and warnings only when every step is, so the step index
-  # identifies the same step in all of them.
-  defp rows(step_ids, steps, result, warnings) do
+  # (one per step), so the step index identifies the same step everywhere.
+  defp rows(submitted, result, warnings) do
     {fuels, step_errors} =
       case result do
         {:ok, %FuelReport{steps: step_fuels}} ->
           {step_fuels, %{}}
 
         {:error, %InvalidMission{errors: errors}} ->
-          {List.duplicate(nil, length(step_ids)), errors_by_step(errors)}
+          {List.duplicate(nil, length(submitted)), errors_by_step(errors)}
       end
 
     warnings_by_step =
       Map.new(warnings, fn %PathWarning{step_index: index} = warning -> {index, warning} end)
 
-    [step_ids, steps, fuels]
-    |> Enum.zip()
+    submitted
+    |> Enum.zip(fuels)
     |> Enum.with_index()
-    |> Enum.map(fn {{id, step, fuel}, index} ->
+    |> Enum.map(fn {{{id, step}, fuel}, index} ->
       Row.new(id, step, fuel, Map.get(warnings_by_step, index), Map.get(step_errors, index, []))
     end)
   end

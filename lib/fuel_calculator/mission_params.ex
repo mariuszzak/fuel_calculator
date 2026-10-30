@@ -86,6 +86,8 @@ defmodule FuelCalculator.MissionParams do
     |> cast(attrs, [:mass])
     |> validate_mass()
     |> cast_steps(attrs)
+    # The form shows field errors only for a changeset with an action.
+    |> then(&%{&1 | action: :validate})
   end
 
   @spec to_mission(Ecto.Changeset.t()) :: {:ok, Mission.t()} | {:error, InvalidMission.t()}
@@ -101,30 +103,20 @@ defmodule FuelCalculator.MissionParams do
   end
 
   @doc false
-  # Every submitted step in order: the validated step, or nil while it's invalid.
-  @spec steps_by_position(Ecto.Changeset.t()) :: [FlightStep.t() | nil]
-  def steps_by_position(%Ecto.Changeset{} = changeset) do
+  # Every submitted step in order, with its id: the validated step, or nil while
+  # the step's own input is invalid.
+  @spec submitted_steps(Ecto.Changeset.t()) :: [{String.t(), FlightStep.t() | nil}]
+  def submitted_steps(%Ecto.Changeset{} = changeset) do
     changeset
     |> get_embed(:steps, :changeset)
     |> Enum.map(fn
-      %Ecto.Changeset{valid?: true} = step -> step |> apply_changes() |> to_flight_step()
-      %Ecto.Changeset{valid?: false} -> nil
+      %Ecto.Changeset{valid?: true} = step ->
+        %StepParams{id: id} = step_params = apply_changes(step)
+        {id, to_flight_step(step_params)}
+
+      %Ecto.Changeset{valid?: false} = step ->
+        {get_field(step, :id), nil}
     end)
-  end
-
-  @doc false
-  # The submitted step ids in order, including steps that are otherwise invalid.
-  @spec step_ids(Ecto.Changeset.t()) :: [String.t()]
-  def step_ids(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> get_embed(:steps, :changeset)
-    |> Enum.map(fn %Ecto.Changeset{} = step -> get_field(step, :id) end)
-  end
-
-  @doc false
-  @spec steps_valid?(Ecto.Changeset.t()) :: boolean()
-  def steps_valid?(%Ecto.Changeset{} = changeset) do
-    changeset |> get_embed(:steps, :changeset) |> Enum.all?(& &1.valid?)
   end
 
   defp to_flight_step(%StepParams{action: action, planet: planet_id}) do
